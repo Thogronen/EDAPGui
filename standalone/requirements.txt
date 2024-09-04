@@ -1,0 +1,11 @@
+colorlog==6.8.2
+mss==8.0.3
+numpy==1.26.4
+opencv_python==4.10.0.84
+paddleocr==2.8.1
+paddlepaddle_gpu==2.6.1
+Pillow==10.4.0
+pywin32==306
+scipy==1.14.1
+setuptools==74.1.1
+
