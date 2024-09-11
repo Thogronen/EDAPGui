@@ -1,0 +1,136 @@
+2024-09-09 02:32:18,433 - root - ERROR - An error occurred: 'KeyboardGUI' object has no attribute 'autopilot_bindings'
+Traceback (most recent call last):
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 1143, in main
+    ex = KeyboardGUI(ed_keys.bindings)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 425, in __init__
+    self.initUI()
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 461, in initUI
+    self.create_keyboard_tab("Ship", "#ff6600")
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 644, in create_keyboard_tab
+    self.create_keyboard(layout, category)
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 651, in create_keyboard
+    main_keyboard = self.create_main_keyboard(category, color)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 672, in create_main_keyboard
+    button = self.create_key_button(key, category, color)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 553, in create_key_button
+    self.update_key_color(button, normalized_key, category, color)
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 753, in update_key_color
+    bound_action = self.get_bound_action(key, category)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 890, in get_bound_action
+    for action, bound_key in self.autopilot_bindings.items():
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'KeyboardGUI' object has no attribute 'autopilot_bindings'. Did you mean: 'load_autopilot_bindings'?
+2024-09-09 02:45:46,311 - root - ERROR - An error occurred: 'FSS'
+Traceback (most recent call last):
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 1296, in main
+    ex = KeyboardGUI(ed_keys.bindings)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 460, in __init__
+    self.initUI()
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 619, in initUI
+    self.create_keyboard_tab("FSS", "#d35400")
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 797, in create_keyboard_tab
+    self.create_keyboard(layout, category)
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 804, in create_keyboard
+    main_keyboard = self.create_main_keyboard(category, color)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 825, in create_main_keyboard
+    button = self.create_key_button(key, category, color)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 706, in create_key_button
+    self.update_key_color(button, normalized_key, category, color)
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 906, in update_key_color
+    bound_action = self.get_bound_action(key, category)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 1033, in get_bound_action
+    for action, bound_key in self.keybindings[category].items():
+                             ~~~~~~~~~~~~~~~~^^^^^^^^^^
+KeyError: 'FSS'
+2024-09-09 12:03:59,883 - root - ERROR - An error occurred: 'KeyboardGUI' object has no attribute 'normalize_key'
+Traceback (most recent call last):
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 1312, in main
+    ex = KeyboardGUI(ed_keys.bindings)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 467, in __init__
+    self.initUI()
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 625, in initUI
+    self.create_keyboard_tab(category, self.get_category_color(category))
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 804, in create_keyboard_tab
+    self.create_keyboard(layout, category)
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 811, in create_keyboard
+    main_keyboard = self.create_main_keyboard(category, color)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 832, in create_main_keyboard
+    button = self.create_key_button(key, category, color)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 708, in create_key_button
+    normalized_key = self.normalize_key(text)
+                     ^^^^^^^^^^^^^^^^^^
+AttributeError: 'KeyboardGUI' object has no attribute 'normalize_key'
+2024-09-09 14:06:06,629 - root - ERROR - An error occurred: 'KeyboardGUI' object has no attribute 'normalize_key'
+Traceback (most recent call last):
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 1301, in main
+    ex = KeyboardGUI(ed_keys.bindings)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 468, in __init__
+    self.initUI()
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 626, in initUI
+    self.create_keyboard_tab(category, self.get_category_color(category))
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 802, in create_keyboard_tab
+    self.create_keyboard(layout, category)
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 809, in create_keyboard
+    main_keyboard = self.create_main_keyboard(category, color)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 830, in create_main_keyboard
+    button = self.create_key_button(key, category, color)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 709, in create_key_button
+    normalized_key = self.normalize_key(text)
+                     ^^^^^^^^^^^^^^^^^^
+AttributeError: 'KeyboardGUI' object has no attribute 'normalize_key'
+2024-09-09 15:35:50,917 - root - ERROR - An error occurred: KeyboardGUI.__init__() missing 1 required positional argument: 'normalize_key_func'
+Traceback (most recent call last):
+  File "d:\GitHub\EDAPGui\standalone\EDKeys_v1.1.py", line 1293, in main
+    ex = KeyboardGUI(ed_keys.bindings)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: KeyboardGUI.__init__() missing 1 required positional argument: 'normalize_key_func'
+2024-09-10 02:08:25,717 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:12:15,828 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:22:21,484 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:23:51,941 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:26:30,495 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:32:54,564 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:33:37,587 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:34:18,886 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:34:41,703 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:43:33,574 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:45:04,083 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:45:32,646 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:48:28,010 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:50:23,156 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:51:38,387 - root - INFO - Bound '\u2191' to 'UI_Up' in General
+2024-09-10 02:51:42,241 - root - INFO - Bound '\u2193' to 'UI_Up' in General
+2024-09-10 02:53:34,339 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 02:58:42,080 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:03:03,946 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:07:04,056 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:10:59,202 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:14:26,391 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:16:51,956 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:18:05,180 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:18:47,463 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:19:49,840 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:20:41,894 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:21:08,091 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:22:18,672 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:27:16,362 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:28:09,333 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:29:16,551 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:30:08,872 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:30:53,223 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:31:30,357 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType
+2024-09-10 03:32:27,901 - root - ERROR - An error occurred while parsing the binds file: expected str, bytes or os.PathLike object, not NoneType

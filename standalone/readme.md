@@ -34,9 +34,14 @@ This project provides a set of Python scripts for working with image processing 
 2. **Create a Virtual Environment:**  (Optional)
     You can either create one yourself, or run auto_vEnv.py. This ensures there's no conflict between the requirements and your exisiting installation. If you happen to close the console - no worries. Simply run open_console.bat and get right back into your VE.
 
-3. **Run the files:** 
-    Run any of the python files via
+3. **Install the requirements:** 
+    ```bash 
+    pip install -r requirements.txt
+
+4. **Run the files:** 
+  
+  Run any of the python files via
     ```bash 
     python filename.py
 
-    Feel free to change the files you run with the scripts!
+  Feel free to change the files you run with the scripts!

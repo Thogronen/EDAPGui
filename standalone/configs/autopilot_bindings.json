@@ -1,0 +1,10 @@
+{
+    "SetDestination": "ins",
+    "ToggleObstacleAvoidance": "",
+    "IncreaseAutopilotSpeed": "",
+    "DecreaseAutopilotSpeed": "",
+    "ToggleAutodocking": "",
+    "EmergencyStop": "",
+    "EngageAutopilot": "num0",
+    "DisengageAutopilot": "f12"
+}

@@ -2,11 +2,13 @@ from os import environ, listdir
 from os.path import abspath, getmtime, isfile, join
 from time import sleep, time
 from xml.etree.ElementTree import parse
+import pydirectinput as directinput
+
 
 import win32gui
 
-from directinput import *
-from EDlogger import logger
+# from directinput import *
+# from EDlogger import logger
 
 """
 File: EDKeys.py

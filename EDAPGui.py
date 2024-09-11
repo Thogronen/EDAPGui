@@ -169,6 +169,7 @@ class APGui():
         self.entries['buttons']['Start FSD'].insert(0, str(self.ed_ap.config['HotKey_StartFSD']))
         self.entries['buttons']['Start SC'].insert(0, str(self.ed_ap.config['HotKey_StartSC']))
         self.entries['buttons']['Stop All'].insert(0, str(self.ed_ap.config['HotKey_StopAllAssists']))
+        self.entries['buttons']['Robigo'].insert(0, str(self.ed_ap.config['HotKey_Robigo']))
 
         if self.ed_ap.config['LogDEBUG']:
             self.radiobuttonvar['debug_mode'].set("Debug")
