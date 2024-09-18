@@ -14,6 +14,15 @@ from PyQt5.QtGui import QFont
 
 import importlib.util
 
+import ctypes
+from ctypes import wintypes
+
+# Determine the architecture and define ULONG_PTR accordingly
+if ctypes.sizeof(ctypes.c_void_p) == 8:
+    ULONG_PTR = ctypes.c_ulonglong
+else:
+    ULONG_PTR = ctypes.c_ulong
+
 
 # Configure logging
 logging.basicConfig(
@@ -38,51 +47,50 @@ if not stream_handler_exists:
     logger.addHandler(stream_handler)
 
 
-
-# SCANCODE dictionary
-SCANCODE = {
+# VK_CODES dictionary
+VK_CODES = {
     # Function Keys
-    'DIK_F1': 0x3B, 'DIK_F2': 0x3C, 'DIK_F3': 0x3D, 'DIK_F4': 0x3E,
-    'DIK_F5': 0x3F, 'DIK_F6': 0x40, 'DIK_F7': 0x41, 'DIK_F8': 0x42,
-    'DIK_F9': 0x43, 'DIK_F10': 0x44, 'DIK_F11': 0x57, 'DIK_F12': 0x58,
+    'F1': 0x70, 'F2': 0x71, 'F3': 0x72, 'F4': 0x73,
+    'F5': 0x74, 'F6': 0x75, 'F7': 0x76, 'F8': 0x77,
+    'F9': 0x78, 'F10': 0x79, 'F11': 0x7A, 'F12': 0x7B,
 
     # Numeric Keys (Main Keyboard)
-    'DIK_0': 0x0B, 'DIK_1': 0x02, 'DIK_2': 0x03, 'DIK_3': 0x04, 'DIK_4': 0x05,
-    'DIK_5': 0x06, 'DIK_6': 0x07, 'DIK_7': 0x08, 'DIK_8': 0x09, 'DIK_9': 0x0A,
+    '0': 0x30, '1': 0x31, '2': 0x32, '3': 0x33, '4': 0x34,
+    '5': 0x35, '6': 0x36, '7': 0x37, '8': 0x38, '9': 0x39,
 
     # Numpad Keys
-    'DIK_NUMPAD0': 0x52, 'DIK_NUMPAD1': 0x4F, 'DIK_NUMPAD2': 0x50, 'DIK_NUMPAD3': 0x51,
-    'DIK_NUMPAD4': 0x4B, 'DIK_NUMPAD5': 0x4C, 'DIK_NUMPAD6': 0x4D, 'DIK_NUMPAD7': 0x47,
-    'DIK_NUMPAD8': 0x48, 'DIK_NUMPAD9': 0x49,
-    'DIK_ADD': 0x4E, 'DIK_SUBTRACT': 0x4A, 'DIK_MULTIPLY': 0x37, 'DIK_DIVIDE': 0xB5,
-    'DIK_DECIMAL': 0x53, 'DIK_NUMPADENTER': 0x9C,
+    'NUMPAD0': 0x60, 'NUMPAD1': 0x61, 'NUMPAD2': 0x62, 'NUMPAD3': 0x63,
+    'NUMPAD4': 0x64, 'NUMPAD5': 0x65, 'NUMPAD6': 0x66, 'NUMPAD7': 0x67,
+    'NUMPAD8': 0x68, 'NUMPAD9': 0x69,
+    'ADD': 0x6B, 'SUBTRACT': 0x6D, 'MULTIPLY': 0x6A, 'DIVIDE': 0x6F,
+    'DECIMAL': 0x6E, 'NUMPADENTER': 0x0D,  # ENTER is 0x0D
 
     # Alphabet Keys
-    'DIK_A': 0x1E, 'DIK_B': 0x30, 'DIK_C': 0x2E, 'DIK_D': 0x20, 'DIK_E': 0x12,
-    'DIK_F': 0x21, 'DIK_G': 0x22, 'DIK_H': 0x23, 'DIK_I': 0x17, 'DIK_J': 0x24,
-    'DIK_K': 0x25, 'DIK_L': 0x26, 'DIK_M': 0x32, 'DIK_N': 0x31, 'DIK_O': 0x18,
-    'DIK_P': 0x19, 'DIK_Q': 0x10, 'DIK_R': 0x13, 'DIK_S': 0x1F, 'DIK_T': 0x14,
-    'DIK_U': 0x16, 'DIK_V': 0x2F, 'DIK_W': 0x11, 'DIK_X': 0x2D, 'DIK_Y': 0x15,
-    'DIK_Z': 0x2C,
+    'A': 0x41, 'B': 0x42, 'C': 0x43, 'D': 0x44, 'E': 0x45,
+    'F': 0x46, 'G': 0x47, 'H': 0x48, 'I': 0x49, 'J': 0x4A,
+    'K': 0x4B, 'L': 0x4C, 'M': 0x4D, 'N': 0x4E, 'O': 0x4F,
+    'P': 0x50, 'Q': 0x51, 'R': 0x52, 'S': 0x53, 'T': 0x54,
+    'U': 0x55, 'V': 0x56, 'W': 0x57, 'X': 0x58, 'Y': 0x59,
+    'Z': 0x5A,
 
     # Control Keys
-    'DIK_ESCAPE': 0x01, 'DIK_TAB': 0x0F, 'DIK_LSHIFT': 0x2A, 'DIK_RSHIFT': 0x36,
-    'DIK_LCONTROL': 0x1D, 'DIK_RCONTROL': 0x9D, 'DIK_BACKSPACE': 0x0E,
-    'DIK_RETURN': 0x1C, 'DIK_LMENU': 0x38, 'DIK_RMENU': 0xB8,
-    'DIK_SPACE': 0x39, 'DIK_CAPSLOCK': 0x3A, 'DIK_NUMLOCK': 0x45, 'DIK_SCROLL': 0x46,
-    'DIK_LWIN': 0xDB, 'DIK_RWIN': 0xDC, 'DIK_APPS': 0xDD,  # Menu key
+    'ESCAPE': 0x1B, 'TAB': 0x09, 'LSHIFT': 0xA0, 'RSHIFT': 0xA1,
+    'LCONTROL': 0xA2, 'RCONTROL': 0xA3, 'BACKSPACE': 0x08,
+    'RETURN': 0x0D, 'LALT': 0xA4, 'RALT': 0xA5,
+    'SPACE': 0x20, 'CAPSLOCK': 0x14, 'NUMLOCK': 0x90, 'SCROLLLOCK': 0x91,
+    'LWIN': 0x5B, 'RWIN': 0x5C, 'MENU': 0x5D,  # Menu key
 
     # Symbol Keys
-    'DIK_MINUS': 0x0C, 'DIK_EQUALS': 0x0D, 'DIK_LBRACKET': 0x1A, 'DIK_RBRACKET': 0x1B,
-    'DIK_SEMICOLON': 0x27, 'DIK_APOSTROPHE': 0x28, 'DIK_GRAVE': 0x29,
-    'DIK_BACKSLASH': 0x2B, 'DIK_COMMA': 0x33, 'DIK_PERIOD': 0x34, 'DIK_SLASH': 0x35,
+    'MINUS': 0xBD, 'EQUALS': 0xBB, 'LBRACKET': 0xDB, 'RBRACKET': 0xDD,
+    'SEMICOLON': 0xBA, 'APOSTROPHE': 0xDE, 'GRAVE': 0xC0,
+    'BACKSLASH': 0xDC, 'COMMA': 0xBC, 'PERIOD': 0xBE, 'SLASH': 0xBF,
 
     # Arrow Keys
-    'DIK_LEFT': 0xCB, 'DIK_RIGHT': 0xCD, 'DIK_UP': 0xC8, 'DIK_DOWN': 0xD0,
+    'LEFT': 0x25, 'UP': 0x26, 'RIGHT': 0x27, 'DOWN': 0x28,
 
     # Extended Keys
-    'DIK_INSERT': 0xD2, 'DIK_DELETE': 0xD3, 'DIK_HOME': 0xC7, 'DIK_END': 0xCF,
-    'DIK_PRIOR': 0xC9, 'DIK_NEXT': 0xD1,  # Page Up and Page Down
+    'INSERT': 0x2D, 'DELETE': 0x2E, 'HOME': 0x24, 'END': 0x23,
+    'PRIOR': 0x21, 'NEXT': 0x22,  # Page Up and Page Down
 }
 
 # Centralized Key Mapping Dictionary
@@ -425,7 +433,27 @@ NAV_LAYOUT = [
     [('LEFT', '←', 1), ('DOWN', '↓', 1), ('RIGHT', '→', 1)]
 ]
 
+class KEYBDINPUT(ctypes.Structure):
+    _fields_ = [
+        ("wVk", wintypes.WORD),
+        ("wScan", wintypes.WORD),
+        ("dwFlags", wintypes.DWORD),
+        ("time", wintypes.DWORD),
+        ("dwExtraInfo", ULONG_PTR),
+    ]
 
+class INPUT(ctypes.Structure):
+    class _INPUT(ctypes.Union):
+        _fields_ = [
+            ("ki", KEYBDINPUT),
+        ]
+    _anonymous_ = ("_input",)
+    _fields_ = [
+        ("type", wintypes.DWORD),
+        ("_input", _INPUT),
+    ]
+
+LPINPUT = ctypes.POINTER(INPUT)
 
 class EDKeys:
     def __init__(self, binds_file): # Initializes the EDKeys instance by parsing the binds file.
@@ -438,11 +466,11 @@ class EDKeys:
         self.normalized_key_cache = {}
         self.bindings = self.parse_binds_file()
         
-    def parse_binds_file(self): # Parses the XML binds file and maps scancodes to actions.
+    def parse_binds_file(self): # Parses the XML binds file and maps VK codes to actions.
         """
-        Parses the XML binds file and maps scancodes to actions.
+        Parses the XML binds file and maps VK codes to actions.
 
-        :return: Dictionary mapping scancodes to a list of actions.
+        :return: Dictionary mapping VK codes to a list of actions.
         """
         bindings = {}
         try:
@@ -460,24 +488,24 @@ class EDKeys:
                     # Normalize the key before further processing
                     normalized_key = self.normalize_key(key)
 
-                    # Get the scancode for the normalized key
-                    scancode = self.get_scancode_for_key(normalized_key)
+                    # Get the VK code for the normalized key
+                    vk_code = self.get_vkcode_for_key(normalized_key)
 
-                    if scancode is not None:
-                        if scancode not in bindings:
-                            bindings[scancode] = []
-                        bindings[scancode].append(action)
+                    if vk_code is not None:
+                        if vk_code not in bindings:
+                            bindings[vk_code] = []
+                        bindings[vk_code].append(action)
                     else:
-                        logging.warning(f"Scancode not found for key '{key}' (Normalized: {normalized_key})")
+                        logging.warning(f"VK code not found for key '{key}' (Normalized: {normalized_key})")
         except ET.ParseError as e:
-            logging.error(f"Error parsing binds file: {e}") # LDB
+            logging.error(f"Error parsing binds file: {e}")
         except Exception as e:
-            logging.error(f"Unexpected error while parsing binds file: {e}") # LDB
+            logging.error(f"Unexpected error while parsing binds file: {e}")
         return bindings
 
-    def normalize_key(self, key): # Normalizes the key name to match the SCANCODE dictionary.
+    def normalize_key(self, key): # Normalizes the key name to match the VK_CODES dictionary.
         """
-        Normalizes the key name to match the SCANCODE dictionary.
+        Normalizes the key name to match the VK_CODES dictionary.
 
         :param key: Original key name from the binds file.
         :return: Normalized key name.
@@ -508,8 +536,8 @@ class EDKeys:
             'Key_RightShift': 'RSHIFT',
             'Key_LeftControl': 'LCONTROL',
             'Key_RightControl': 'RCONTROL',
-            'Key_LeftAlt': 'LMENU',  # LMENU is Left Alt
-            'Key_RightAlt': 'RMENU',  # RMENU is Right Alt
+            'Key_LeftAlt': 'LALT',
+            'Key_RightAlt': 'RALT',
             'Key_Return': 'RETURN',
             'Key_NumpadEnter': 'NUMPADENTER',
             'Key_LeftBracket': 'LBRACKET',
@@ -521,34 +549,34 @@ class EDKeys:
         self.normalized_key_cache[key] = normalized_key
         logging.debug(f"Normalized key '{key}' to '{normalized_key}'")
         return normalized_key
-
-    def get_scancode_for_key(self, key): # Retrieves the scancode for a given key from the SCANCODE dictionary - TODO : Mouse and Controller
+    
+    def get_vkcode_for_key(self, key): # Retrieves the VK code for a given key from the VK_CODES dictionary - TODO: Mouse and Controller
         """
-        Retrieves the scancode for a given key from the SCANCODE dictionary.
+        Retrieves the VK code for a given key from the VK_CODES dictionary.
 
         :param key: Normalized key name.
-        :return: Scancode integer or None if not found.
+        :return: VK code integer or None if not found.
         """
-        # Check for mouse-related keys and return a dummy scancode - TODO in case we ever want to do mouse keys :)
+        # Check for mouse-related keys and return a dummy VK code - TODO in case we ever want to do mouse keys :)
         if key.startswith(('MOUSE_', 'POS_MOUSE_', 'NEG_MOUSE_')):
-            return 0  # Use 0 as a dummy scancode for mouse keys
+            return 0  # Use 0 as a dummy VK code for mouse keys
 
-        scancode = SCANCODE.get(f'DIK_{key.upper()}')
-        if scancode is None:
-            logging.warning(f"No scancode found for key '{key.upper()}'")
+        vk_code = VK_CODES.get(key.upper())
+        if vk_code is None:
+            logging.warning(f"No VK code found for key '{key.upper()}'")
         else:
-            logging.debug(f"Scancode for key '{key.upper()}': {scancode}")
-        return scancode
-
-    def get_bound_actions(self, scancode): # Retrieves the list of actions bound to a specific scancode.
+            logging.debug(f"VK code for key '{key.upper()}': {vk_code}")
+        return vk_code
+    
+    def get_bound_actions(self, vk_code): # Retrieves the list of actions bound to a specific VK code.
         """
-        Retrieves the list of actions bound to a specific scancode.
+        Retrieves the list of actions bound to a specific VK code.
 
-        :param scancode: Scancode integer.
+        :param vk_code: VK code integer.
         :return: List of action names.
         """
-        return self.bindings.get(scancode, [])
-
+        return self.bindings.get(vk_code, [])
+    
     def save_bindings_to_file(self, file_path): # Saves the current bindings to an XML file.
         """
         Saves the current bindings to an XML file.
@@ -556,11 +584,11 @@ class EDKeys:
         :param file_path: Path where the bindings will be saved.
         """
         root = ET.Element('KeyBindings')
-        for scancode, actions in self.bindings.items():
+        for vk_code, actions in self.bindings.items():
             for action in actions:
                 action_element = ET.SubElement(root, action)
                 primary = ET.SubElement(action_element, 'Primary')
-                key_name = self.get_key_name_from_scancode(scancode)
+                key_name = self.get_key_name_from_vkcode(vk_code)
                 primary.set('Key', key_name if key_name else '')
         tree = ET.ElementTree(root)
         try:
@@ -569,19 +597,19 @@ class EDKeys:
         except Exception as e:
             logging.error(f"Failed to save bindings: {e}")
                    
-    def get_key_name_from_scancode(self, scancode): # Retrieves the key name corresponding to a scancode.
+    def get_key_name_from_vkcode(self, vk_code): # Retrieves the key name corresponding to a VK code.
         """
-        Retrieves the key name corresponding to a scancode.
+        Retrieves the key name corresponding to a VK code.
 
-        :param scancode: Scancode integer.
+        :param vk_code: VK code integer.
         :return: Key name string or None if not found.
         """
-        for key, code in SCANCODE.items():
-            if code == scancode:
-                key_name = key.replace('DIK_', '')
-                logging.debug(f"Key name for scancode {scancode}: {key_name}")
+        for key, code in VK_CODES.items():
+            if code == vk_code:
+                key_name = key
+                logging.debug(f"Key name for VK code {vk_code}: {key_name}")
                 return key_name
-        logging.warning(f"No key name found for scancode {scancode}")
+        logging.warning(f"No key name found for VK code {vk_code}")
         return None
 
     def unbind_action(self, action): # Removes the specified action from all key bindings.
@@ -590,11 +618,11 @@ class EDKeys:
 
         :param action: Action name to unbind.
         """
-        for scancode, actions in self.bindings.items():
+        for vk_code, actions in self.bindings.items():
             if action in actions:
                 actions.remove(action)
-                logging.info(f"Action '{action}' unbound from scancode {scancode}")
-
+                logging.info(f"Action '{action}' unbound from VK code {vk_code}")
+                
 
 class PluginInterface:
     """
@@ -740,7 +768,7 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
         """
         Sets up the user interface components of the GUI.
         """
-        self.setWindowTitle('Elite: Dangerous Keybinds Visualizer v1.1 by glassesinsession')
+        self.setWindowTitle('Elite: Dangerous Keybinds Visualizer v1.2 by glassesinsession')
         self.setGeometry(100, 100, 1200, 700)
         self.setMinimumSize(1200, 700)
 
@@ -903,7 +931,7 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
             section_layout.setColumnStretch(col, 0)
         return section_layout
     
-    def create_key_button(self, key_name, display_label, size, actual_category, tab_category): # Creates a QPushButton representing a key on the keyboard.
+    def create_key_button(self, key_name, display_label, size, actual_category, tab_category):
         """
         Creates a QPushButton representing a key on the keyboard.
 
@@ -922,8 +950,8 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
         button.setText(display_label)
 
         normalized_key = self.ed_keys.normalize_key(key_name)
-        scancode = self.ed_keys.get_scancode_for_key(normalized_key)
-        bound_actions = self.ed_keys.get_bound_actions(scancode)
+        vk_code = self.ed_keys.get_vkcode_for_key(normalized_key)
+        bound_actions = self.ed_keys.get_bound_actions(vk_code)
 
         # Determine relevant actions based on the current tab
         if tab_category == "All":
@@ -957,17 +985,18 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
                     specific_category = next(iter(non_general_categories)) if non_general_categories else "General"
 
             key_color_key = f'key_{specific_category.lower()}'
-            background_color = THEMES[CURRENT_THEME].get(key_color_key, THEMES[CURRENT_THEME]['key_bound'])
-            pressed_color = self.get_lighter_color(background_color)
+            original_color = THEMES[CURRENT_THEME].get(key_color_key, THEMES[CURRENT_THEME]['key_bound'])
+            pressed_color = self.get_lighter_color(original_color)
             tooltip_text = "\n".join(relevant_actions)
         else:
-            background_color = THEMES[CURRENT_THEME]['key_normal']
-            pressed_color = self.get_lighter_color(background_color)
+            original_color = THEMES[CURRENT_THEME]['key_normal']
+            pressed_color = self.get_lighter_color(original_color)
             tooltip_text = "Unassigned"
 
+        # Apply the stylesheet using original and pressed colors
         button.setStyleSheet(f"""
             QPushButton {{
-                background-color: {background_color};
+                background-color: {original_color};
                 color: {THEMES[CURRENT_THEME]['text']};
                 border: 1px solid #555555;
                 border-radius: 3px;
@@ -983,13 +1012,17 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
 
         button.setToolTip(tooltip_text)
 
-        # Set properties for later reference
+        # Store original and pressed colors as properties for later use
+        button.setProperty("original_color", original_color)
+        button.setProperty("pressed_color", pressed_color)
+
+        # Set other properties for later reference
         button.setProperty("all_bound_actions", bound_actions)
         button.setProperty("relevant_actions", relevant_actions)
         button.setProperty("category", actual_category)
 
         return button
-    
+
     def initialize_key_states(self): # Initializes the state of each key (pressed or released) to False.
         """
         Initializes the state of each key (pressed or released) to False.
@@ -999,7 +1032,7 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
                 self.key_states[key] = False
         logging.debug("Initialized all key states to False.")
                           
-    def display_bindings(self, key_name): # Displays the actions bound to a specific key in the bindings text area.
+    def display_bindings(self, key_name):
         """
         Displays the actions bound to a specific key in the bindings text area.
 
@@ -1007,25 +1040,28 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
         """
         if not self.bindings_text.isVisible():
             return
-        if key_name in self.key_buttons:
-            button = self.key_buttons[key_name]
-            all_bound_actions = button.property("all_bound_actions")
-            current_category = self.tab_widget.tabText(self.tab_widget.currentIndex())
-
+        if key_name in self.key_buttons.get("All", {}):
+            button = self.key_buttons["All"][key_name]
+            vk_code = self.ed_keys.get_vkcode_for_key(self.ed_keys.normalize_key(key_name))
+            bound_actions = self.ed_keys.get_bound_actions(vk_code)
+            
             self.bindings_text.clear()
             self.bindings_text.append(f"<h2>Key: {key_name}</h2>")
 
-            if all_bound_actions:
-                categorized_actions = self.categorize_actions(all_bound_actions)
+            if bound_actions:
+                categorized_actions = self.categorize_actions(bound_actions)
 
-                category_order = [current_category, "General"] + [cat for cat in BINDING_CATEGORIES.keys() if cat not in [current_category, "General"]]
+                category_order = [self.tab_widget.tabText(i) for i in range(self.tab_widget.count())]
+                if "All" in category_order:
+                    category_order.remove("All")
+                category_order = ["General"] + category_order
 
                 for category in category_order:
                     if category in categorized_actions:
                         self.display_category(category, categorized_actions[category])
             else:
                 self.bindings_text.append("No bindings found")
-    
+
     def categorize_actions(self, actions): # Categorizes actions based on predefined binding categories.
         """
         Categorizes actions based on predefined binding categories.
@@ -1094,7 +1130,7 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
             button.setToolTip(tooltip_text)
             logging.debug(f"Updated button '{key_name}': has_binding={has_binding}, category={specific_category or category}")
 
-    def update_key_visual(self, key_name, is_pressed): # Updates the visual appearance of a key based on its pressed state
+    def update_key_visual(self, key_name, is_pressed):
         """
         Updates the visual appearance of a key based on its pressed state.
 
@@ -1103,17 +1139,43 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
         """
         if key_name in self.key_buttons.get("All", {}):
             button = self.key_buttons["All"][key_name]
+            
+            if is_pressed:
+                # Change to pressed color
+                pressed_color = button.property("pressed_color")
+                button.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: {pressed_color};
+                        color: {THEMES[CURRENT_THEME]['text']};
+                        border: 1px solid #555555;
+                        border-radius: 3px;
+                        font-weight: bold;
+                        font-size: 10px;
+                        text-align: center;
+                        padding: 2px;
+                    }}
+                """)
+                logging.debug(f"Key '{key_name}' pressed. Changed color to pressed_color: {pressed_color}")
+            else:
+                # Revert to original color
+                original_color = button.property("original_color")
+                button.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: {original_color};
+                        color: {THEMES[CURRENT_THEME]['text']};
+                        border: 1px solid #555555;
+                        border-radius: 3px;
+                        font-weight: bold;
+                        font-size: 10px;
+                        text-align: center;
+                        padding: 2px;
+                    }}
+                """)
+                logging.debug(f"Key '{key_name}' released. Reverted color to original_color: {original_color}")
+            
             button.setDown(is_pressed)
-            logging.debug(f"Key visual updated for '{key_name}' to {'pressed' if is_pressed else 'released'}.")
-    
-        # Update across all categories if necessary
-        # for category, keys in self.key_buttons.items():
-        #     if category == "All":
-        #         continue
-        #     if key_name in keys:
-        #         keys[key_name].setDown(is_pressed)
-        #         logging.debug(f"Key visual updated for '{key_name}' in category '{category}' to {'pressed' if is_pressed else 'released'}.")
-                
+
+           
     def get_lighter_color(self, color):
         # Convert hex to RGB
         color = color.lstrip('#')
@@ -1385,7 +1447,7 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
             event.accept()
         else:
             event.ignore()
-                    
+                 
     def handle_key_event(self, key, pressed):
         key_name = key.replace('<br>', '')
         self.key_states[key_name] = pressed
@@ -1771,7 +1833,7 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
         # Debugging Output
         logging.debug(f"Key: {key}, Scan Code: {scan_code}")
 
-        # Handle Modifier Keys with Scan Codes
+        # Handle Modifier Keys with VK Codes
         if key == Qt.Key_Shift:
             if scan_code == 42:
                 return 'LSHIFT'
@@ -1790,9 +1852,9 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
                 return ''
         elif key == Qt.Key_Alt:
             if scan_code == 56:
-                return 'LMENU'
+                return 'LALT'
             elif scan_code in [184, 312]:  # RMENU can have multiple scan codes
-                return 'RMENU'
+                return 'RALT'
             else:
                 logging.warning(f"Unknown scan_code for Alt key: {scan_code}")
                 return ''
@@ -1817,10 +1879,10 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
                 Qt.Key_Enter: 'NUMPADENTER',
             }
             return numpad_map.get(key, KEY_MAPPING.get(key, ''))
-        
+
         # General Keys
         key_name = KEY_MAPPING.get(key, event.text().upper())
-        
+
         if not key_name:
             logging.warning(f"Unmapped key pressed: {key}")
         return key_name
@@ -1830,7 +1892,46 @@ class KeyboardGUI(QMainWindow): # The main GUI window for the Keybind Visualizer
         self.setFocus(Qt.OtherFocusReason)
         super().showEvent(event)
 
+    def simulate_key(self, vk_code):
+        """
+        Simulates a key press and release for the given VK code.
 
+        :param vk_code: Virtual-Key code of the key to simulate.
+        """
+        inputs = (INPUT * 2)()
+
+        # Key press
+        inputs[0].type = INPUT_KEYBOARD
+        inputs[0].ki.wVk = vk_code
+        inputs[0].ki.wScan = 0
+        inputs[0].ki.dwFlags = 0
+        inputs[0].ki.time = 0
+        inputs[0].ki.dwExtraInfo = 0
+
+        # Key release
+        inputs[1].type = INPUT_KEYBOARD
+        inputs[1].ki.wVk = vk_code
+        inputs[1].ki.wScan = 0
+        inputs[1].ki.dwFlags = KEYEVENTF_KEYUP
+        inputs[1].ki.time = 0
+        inputs[1].ki.dwExtraInfo = 0
+
+        n_sent = SendInput(2, ctypes.byref(inputs), ctypes.sizeof(INPUT))
+        if n_sent != 2:
+            logging.error(f"SendInput failed for VK code {vk_code}")
+        else:
+            key_name = self.ed_keys.get_key_name_from_vkcode(vk_code)
+            logging.debug(f"Simulated key press and release for '{key_name}' (VK Code: {vk_code})")
+
+
+# SendInput function
+SendInput = ctypes.windll.user32.SendInput
+SendInput.argtypes = (wintypes.UINT, LPINPUT, ctypes.c_int)
+SendInput.restype = wintypes.UINT
+
+# Constants
+INPUT_KEYBOARD = 1
+KEYEVENTF_KEYUP = 0x0002
  
 def main():
     app = QApplication(sys.argv)
