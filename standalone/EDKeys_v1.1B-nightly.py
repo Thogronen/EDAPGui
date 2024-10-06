@@ -1,3 +1,27 @@
+### Features
+
+# v1.1B-nightly is close to a full rework on how the system works, now using Virtual Keys over hardcoded values to pave the way for multi-language support.
+# This version does not contain many of the UI enhancements NOR key-rebinding ability, but will show you what keys you have bound over different categories.
+
+# - [x] An overview of your chosen (or, last used by default) keybind file
+# - [ ] Ability to quickly and easily re-bind keys
+# - [ ] Colour schemes/themes + tab grouping
+# - [ ] Overview of what actions you have not bound
+# - [ ] A search bar, allowing you to look for binds
+# - [x] Key highlights on press
+# - [ ] Support for multiple layouts/languages
+# - [ ] Global logging! Helpful for debugging... and more.
+# - [ ] Visual Cheat Sheet (Maybe this should be a plugin...)
+# - [ ] Undo / Redo Stack (Undo individual key changes)
+# - [ ] Keyboard Navigation in the dialog screen
+# - [ ] Plugins
+    # - [ ] EDAP Activation Keys
+    # - [ ] Background running
+    # - [ ] More?
+    
+#   As a sidenote, I no longer think 1500 lines is a lot LOL
+
+
 import sys
 import os
 import configparser
@@ -30,10 +54,36 @@ from PyQt5.QtWidgets import (
     QTreeWidgetItem,
     QScrollArea,
     QSplitter,
+    QStyle,
+    QGroupBox,
+    QListWidget,
+    QWidgetItem,
+    QDialogButtonBox,
+    QListWidgetItem
 )
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject
-from PyQt5.QtGui import QFont
 
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QObject, QPoint, QRect, QEvent
+from PyQt5.QtGui import QFont, QPainter, QColor, QPen
+
+### Recall debug code
+
+# import traceback
+
+# def debug_log_call(original_func):
+#     def wrapper(msg, *args, **kwargs):
+#         print(f"Debug: About to log: {msg}")
+#         print("Debug: Stack trace:", "".join(traceback.format_stack()))
+#         return original_func(msg, *args, **kwargs)
+#     return wrapper
+
+# # Apply the monkeypatch
+# logging.info = debug_log_call(logging.info)
+# logging.debug = debug_log_call(logging.debug)
+# logging.warning = debug_log_call(logging.warning)
+# logging.error = debug_log_call(logging.error)
+# logging.critical = debug_log_call(logging.critical)
+
+###
 
 # Determine the architecture and define ULONG_PTR accordingly
 if ctypes.sizeof(ctypes.c_void_p) == 8:
@@ -41,24 +91,7 @@ if ctypes.sizeof(ctypes.c_void_p) == 8:
 else:
     ULONG_PTR = ctypes.c_ulong
 
-
-# Configure logging to a file
-logging.basicConfig(
-    filename="key_log.txt", level=logging.DEBUG, format="%(asctime)s - %(message)s"
-)
-
-# Remove duplicate StreamHandlers if any
-# logger = logging.getLogger()
-# if not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers):
-#     stream_handler = logging.StreamHandler(sys.stdout)
-#     stream_handler.setFormatter(
-#         logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-#     )
-#     logger.addHandler(stream_handler)
-
-
 # VK Code Mapping (Virtual-Key Codes) - Including mouse buttons
-
 VK_CODE = {  # Gives a name to a hexidecimal code.
     "LBUTTON": 0x01,
     "RBUTTON": 0x02,
@@ -239,78 +272,119 @@ VK_CODE = {  # Gives a name to a hexidecimal code.
 
 # Centralized Key Mapping Dictionary to map Qt keys to readable names, linking the given name from VK_Code to the keyboard layout
 KEY_MAPPING = {
-    Qt.Key_Escape: "ESCAPE",
-    Qt.Key_Tab: "TAB",
-    Qt.Key_Backspace: "BACK",
-    Qt.Key_Return: "RETURN",
-    Qt.Key_Enter: "RETURN",
-    Qt.Key_Insert: "INSERT",
-    Qt.Key_Delete: "DELETE",
-    Qt.Key_Pause: "PAUSE",
-    Qt.Key_Print: "PRINT",
-    Qt.Key_SysReq: "SYSREQ",
-    Qt.Key_Clear: "CLEAR",
-    Qt.Key_Home: "HOME",
-    Qt.Key_End: "END",
-    Qt.Key_Left: "LEFT",
-    Qt.Key_Up: "UP",
-    Qt.Key_Right: "RIGHT",
-    Qt.Key_Down: "DOWN",
-    Qt.Key_PageUp: "PRIOR",
-    Qt.Key_PageDown: "NEXT",
-    Qt.Key_Shift: "SHIFT",
-    Qt.Key_Control: "CONTROL",
-    Qt.Key_Meta: "LWIN",
-    Qt.Key_Alt: "MENU",
-    Qt.Key_CapsLock: "CAPITAL",
-    Qt.Key_NumLock: "NUMLOCK",
-    Qt.Key_ScrollLock: "SCROLL",
-    Qt.Key_F1: "F1",
-    Qt.Key_F2: "F2",
-    Qt.Key_F3: "F3",
-    Qt.Key_F4: "F4",
-    Qt.Key_F5: "F5",
-    Qt.Key_F6: "F6",
-    Qt.Key_F7: "F7",
-    Qt.Key_F8: "F8",
-    Qt.Key_F9: "F9",
-    Qt.Key_F10: "F10",
-    Qt.Key_F11: "F11",
-    Qt.Key_F12: "F12",
-    Qt.Key_Space: "SPACE",
-    Qt.Key_Exclam: "1",
-    Qt.Key_At: "2",
-    Qt.Key_NumberSign: "3",
-    Qt.Key_Dollar: "4",
-    Qt.Key_Percent: "5",
-    Qt.Key_AsciiCircum: "6",
-    Qt.Key_Ampersand: "7",
-    Qt.Key_Asterisk: "8",
-    Qt.Key_ParenLeft: "9",
-    Qt.Key_ParenRight: "0",
-    Qt.Key_Minus: "MINUS",
-    Qt.Key_Plus: "PLUS",
-    Qt.Key_Equal: "EQUALS",
-    Qt.Key_BracketLeft: "OEM_4",
-    Qt.Key_BracketRight: "OEM_6",
-    Qt.Key_Backslash: "OEM_5",
-    Qt.Key_Semicolon: "OEM_1",
-    Qt.Key_Apostrophe: "OEM_7",
-    Qt.Key_Comma: "OEM_COMMA",
-    Qt.Key_Period: "OEM_PERIOD",
-    Qt.Key_Slash: "OEM_2",
-    Qt.Key_QuoteLeft: "OEM_3",
-    # Arrow Keys
-    Qt.Key_Up: "UP",
-    Qt.Key_Down: "DOWN",
-    Qt.Key_Left: "LEFT",
-    Qt.Key_Right: "RIGHT",
-    # Numpad Keys
+    Qt.Key_Escape: "Key_Escape",
+    Qt.Key_Tab: "Key_Tab",
+    Qt.Key_Backspace: "Key_Backspace",
+    Qt.Key_Return: "Key_Enter",
+    Qt.Key_Enter: "Key_Enter",
+    Qt.Key_Insert: "Key_Insert",
+    Qt.Key_Delete: "Key_Delete",
+    Qt.Key_Pause: "Key_Pause",
+    Qt.Key_Print: "Key_Print",
+    Qt.Key_Home: "Key_Home",
+    Qt.Key_End: "Key_End",
+    Qt.Key_Left: "Key_LeftArrow",
+    Qt.Key_Up: "Key_UpArrow",
+    Qt.Key_Right: "Key_RightArrow",
+    Qt.Key_Down: "Key_DownArrow",
+    Qt.Key_PageUp: "Key_PageUp",
+    Qt.Key_PageDown: "Key_PageDown",
+    Qt.Key_CapsLock: "Key_CapsLock",
+    Qt.Key_F1: "Key_F1",
+    Qt.Key_F2: "Key_F2",
+    Qt.Key_F3: "Key_F3",
+    Qt.Key_F4: "Key_F4",
+    Qt.Key_F5: "Key_F5",
+    Qt.Key_F6: "Key_F6",
+    Qt.Key_F7: "Key_F7",
+    Qt.Key_F8: "Key_F8",
+    Qt.Key_F9: "Key_F9",
+    Qt.Key_F10: "Key_F10",
+    Qt.Key_F11: "Key_F11",
+    Qt.Key_F12: "Key_F12",
+    Qt.Key_Space: "Key_Space",
+    Qt.Key_Plus: "Key_Equals",
+    Qt.Key_Comma: "Key_Comma",
+    Qt.Key_Minus: "Key_Minus",
+    Qt.Key_Period: "Key_Period",
+    Qt.Key_Slash: "Key_Slash",
+    Qt.Key_0: "Key_0",
+    Qt.Key_1: "Key_1",
+    Qt.Key_2: "Key_2",
+    Qt.Key_3: "Key_3",
+    Qt.Key_4: "Key_4",
+    Qt.Key_5: "Key_5",
+    Qt.Key_6: "Key_6",
+    Qt.Key_7: "Key_7",
+    Qt.Key_8: "Key_8",
+    Qt.Key_9: "Key_9",
+    Qt.Key_Colon: "Key_SemiColon",
+    Qt.Key_Semicolon: "Key_SemiColon",
+    Qt.Key_Less: "Key_Comma",
+    Qt.Key_Equal: "Key_Equals",
+    Qt.Key_Greater: "Key_Period",
+    Qt.Key_Question: "Key_Slash",
+    Qt.Key_At: "Key_2",
+    Qt.Key_A: "Key_A",
+    Qt.Key_B: "Key_B",
+    Qt.Key_C: "Key_C",
+    Qt.Key_D: "Key_D",
+    Qt.Key_E: "Key_E",
+    Qt.Key_F: "Key_F",
+    Qt.Key_G: "Key_G",
+    Qt.Key_H: "Key_H",
+    Qt.Key_I: "Key_I",
+    Qt.Key_J: "Key_J",
+    Qt.Key_K: "Key_K",
+    Qt.Key_L: "Key_L",
+    Qt.Key_M: "Key_M",
+    Qt.Key_N: "Key_N",
+    Qt.Key_O: "Key_O",
+    Qt.Key_P: "Key_P",
+    Qt.Key_Q: "Key_Q",
+    Qt.Key_R: "Key_R",
+    Qt.Key_S: "Key_S",
+    Qt.Key_T: "Key_T",
+    Qt.Key_U: "Key_U",
+    Qt.Key_V: "Key_V",
+    Qt.Key_W: "Key_W",
+    Qt.Key_X: "Key_X",
+    Qt.Key_Y: "Key_Y",
+    Qt.Key_Z: "Key_Z",
+    Qt.Key_BracketLeft: "Key_LeftBracket",
+    Qt.Key_Backslash: "Key_BackSlash",
+    Qt.Key_BracketRight: "Key_RightBracket",
+    Qt.Key_AsciiCircum: "Key_6",
+    Qt.Key_Underscore: "Key_Minus",
+    Qt.Key_QuoteLeft: "Key_Grave",
+    Qt.Key_BraceLeft: "Key_LeftBracket",
+    Qt.Key_Bar: "Key_BackSlash",
+    Qt.Key_BraceRight: "Key_RightBracket",
+    Qt.Key_AsciiTilde: "Key_Grave",
     Qt.Key_NumLock: "Key_NumLock",
-    Qt.Key_Plus | Qt.KeypadModifier: "Key_Numpad_Add",
-    Qt.Key_Minus | Qt.KeypadModifier: "Key_Numpad_Subtract",
-    Qt.Key_Asterisk | Qt.KeypadModifier: "Key_Numpad_Multiply",
-    Qt.Key_Slash | Qt.KeypadModifier: "Key_Numpad_Divide",
+    Qt.Key_ScrollLock: "Key_ScrollLock",
+    Qt.Key_F13: "Key_F13",
+    Qt.Key_F14: "Key_F14",
+    Qt.Key_F15: "Key_F15",
+    Qt.Key_F16: "Key_F16",
+    Qt.Key_F17: "Key_F17",
+    Qt.Key_F18: "Key_F18",
+    Qt.Key_F19: "Key_F19",
+    Qt.Key_F20: "Key_F20",
+    Qt.Key_F21: "Key_F21",
+    Qt.Key_F22: "Key_F22",
+    Qt.Key_F23: "Key_F23",
+    Qt.Key_F24: "Key_F24",
+    Qt.Key_Menu: "Key_Apps",
+    Qt.Key_MediaPlay: "Key_MediaPlayPause",
+    Qt.Key_MediaStop: "Key_MediaStop",
+    Qt.Key_VolumeDown: "Key_VolumeDown",
+    Qt.Key_VolumeUp: "Key_VolumeUp",
+    Qt.Key_VolumeMute: "Key_VolumeMute",
+    Qt.Key_Apostrophe: "Key_Apostrophe",
+    Qt.Key_QuoteLeft: "Key_Grave",
+    
+    # Numpad keys
     Qt.Key_0 | Qt.KeypadModifier: "Key_Numpad_0",
     Qt.Key_1 | Qt.KeypadModifier: "Key_Numpad_1",
     Qt.Key_2 | Qt.KeypadModifier: "Key_Numpad_2",
@@ -321,143 +395,173 @@ KEY_MAPPING = {
     Qt.Key_7 | Qt.KeypadModifier: "Key_Numpad_7",
     Qt.Key_8 | Qt.KeypadModifier: "Key_Numpad_8",
     Qt.Key_9 | Qt.KeypadModifier: "Key_Numpad_9",
-    Qt.Key_Enter | Qt.KeypadModifier: "Key_NumpadEnter",
+    Qt.Key_Asterisk | Qt.KeypadModifier: "Key_Numpad_Multiply",
+    Qt.Key_Plus | Qt.KeypadModifier: "Key_Numpad_Add",
+    Qt.Key_Minus | Qt.KeypadModifier: "Key_Numpad_Subtract",
     Qt.Key_Period | Qt.KeypadModifier: "Key_Numpad_Decimal",
+    Qt.Key_Slash | Qt.KeypadModifier: "Key_Numpad_Divide",
+    Qt.Key_Enter | Qt.KeypadModifier: "Key_NumpadEnter",
+    
+    # Other shenenigans
+    Qt.Key_Shift: "Key_LeftShift",
+    Qt.Key_Control: "Key_LeftControl",
+    Qt.Key_Alt: "Key_LeftAlt",
+    Qt.Key_AltGr: "Key_RightAlt",
+    Qt.Key_Meta: "Key_LeftWin",
+    0x01000085: "Key_RightWin",  # Right Windows key
 }
+
+SCAN_CODE_MAPPING = { # You might need to update this, depending on your keyboard layout and language. In order to do this, comment the offending keys out, save, reload, and check the output on pressing that key. That will give you your scan code.
+    29: "Key_LeftControl",
+    56: "Key_LeftAlt",
+    54: "Key_RightShift",
+    285: "Key_RightControl",
+    312: "Key_RightAlt",  # This is AltGr
+} 
 
 # Layout Definitions (only including QWERTY for now).
 LAYOUTS = {
     "QWERTY": {
         "main": [
             [
-                ("ESCAPE", "Esc", 2),
-                ("F1", "F1", 1),
-                ("F2", "F2", 1),
-                ("F3", "F3", 1),
-                ("F4", "F4", 1),
-                ("F5", "F5", 1),
-                ("F6", "F6", 1),
-                ("F7", "F7", 1),
-                ("F8", "F8", 1),
-                ("F9", "F9", 1),
-                ("F10", "F10", 1),
-                ("F11", "F11", 1),
-                ("F12", "F12", 1),
+                ("Key_Escape", "Esc", 2),
+                ("Key_F1", "F1", 1),
+                ("Key_F2", "F2", 1),
+                ("Key_F3", "F3", 1),
+                ("Key_F4", "F4", 1),
+                ("Key_F5", "F5", 1),
+                ("Key_F6", "F6", 1),
+                ("Key_F7", "F7", 1),
+                ("Key_F8", "F8", 1),
+                ("Key_F9", "F9", 1),
+                ("Key_F10", "F10", 1),
+                ("Key_F11", "F11", 1),
+                ("Key_F12", "F12", 1),
             ],
             [
-                ("OEM_3", "`", 1),  # Previously TILDE
-                ("1", "1", 1),
-                ("2", "2", 1),
-                ("3", "3", 1),
-                ("4", "4", 1),
-                ("5", "5", 1),
-                ("6", "6", 1),
-                ("7", "7", 1),
-                ("8", "8", 1),
-                ("9", "9", 1),
-                ("0", "0", 1),
-                ("MINUS", "-", 1),
-                ("EQUALS", "=", 1),
-                ("BACK", "Backspace", 2),  # Previously BACKSPACE
+                ("Key_Grave", "`", 1),
+                ("Key_1", "1", 1),
+                ("Key_2", "2", 1),
+                ("Key_3", "3", 1),
+                ("Key_4", "4", 1),
+                ("Key_5", "5", 1),
+                ("Key_6", "6", 1),
+                ("Key_7", "7", 1),
+                ("Key_8", "8", 1),
+                ("Key_9", "9", 1),
+                ("Key_0", "0", 1),
+                ("Key_Minus", "-", 1),
+                ("Key_Equals", "=", 1),
+                ("Key_Backspace", "Backspace", 2),
             ],
             [
-                ("TAB", "Tab", 1.5),
-                ("Q", "Q", 1),
-                ("W", "W", 1),
-                ("E", "E", 1),
-                ("R", "R", 1),
-                ("T", "T", 1),
-                ("Y", "Y", 1),
-                ("U", "U", 1),
-                ("I", "I", 1),
-                ("O", "O", 1),
-                ("P", "P", 1),
-                ("OEM_4", "[", 1),
-                ("OEM_6", "]", 1),
-                ("OEM_5", "\\", 1.5),  # BACKSLASH
+                ("Key_Tab", "Tab", 1.5),
+                ("Key_Q", "Q", 1),
+                ("Key_W", "W", 1),
+                ("Key_E", "E", 1),
+                ("Key_R", "R", 1),
+                ("Key_T", "T", 1),
+                ("Key_Y", "Y", 1),
+                ("Key_U", "U", 1),
+                ("Key_I", "I", 1),
+                ("Key_O", "O", 1),
+                ("Key_P", "P", 1),
+                ("Key_LeftBracket", "[", 1),
+                ("Key_RightBracket", "]", 1),
+                ("Key_BackSlash", "\\", 1.5),
             ],
             [
-                ("CAPITAL", "Caps Lock", 2),  # CAPSLOCK
-                ("A", "A", 1),
-                ("S", "S", 1),
-                ("D", "D", 1),
-                ("F", "F", 1),
-                ("G", "G", 1),
-                ("H", "H", 1),
-                ("J", "J", 1),
-                ("K", "K", 1),
-                ("L", "L", 1),
-                ("OEM_1", ";", 1),  # SEMICOLON
-                ("OEM_7", "'", 1),  # APOSTROPHE
-                ("RETURN", "Enter", 2),  # ENTER
+                ("Key_CapsLock", "Caps Lock", 2),
+                ("Key_A", "A", 1),
+                ("Key_S", "S", 1),
+                ("Key_D", "D", 1),
+                ("Key_F", "F", 1),
+                ("Key_G", "G", 1),
+                ("Key_H", "H", 1),
+                ("Key_J", "J", 1),
+                ("Key_K", "K", 1),
+                ("Key_L", "L", 1),
+                ("Key_SemiColon", ";", 1),
+                ("Key_Apostrophe", "'", 1),
+                ("Key_Enter", "Enter", 2),
             ],
             [
-                ("LSHIFT", "Shift", 2.5),
-                ("Z", "Z", 1),
-                ("X", "X", 1),
-                ("C", "C", 1),
-                ("V", "V", 1),
-                ("B", "B", 1),
-                ("N", "N", 1),
-                ("M", "M", 1),
-                ("OEM_COMMA", ",", 1),  # COMMA
-                ("OEM_PERIOD", ".", 1),  # PERIOD
-                ("OEM_2", "/", 1),  # SLASH
-                ("RSHIFT", "Shift", 2.5),
+                ("Key_LeftShift", "Shift", 2.5),
+                ("Key_Z", "Z", 1),
+                ("Key_X", "X", 1),
+                ("Key_C", "C", 1),
+                ("Key_V", "V", 1),
+                ("Key_B", "B", 1),
+                ("Key_N", "N", 1),
+                ("Key_M", "M", 1),
+                ("Key_Comma", ",", 1),
+                ("Key_Period", ".", 1),
+                ("Key_Slash", "/", 1),
+                ("Key_RightShift", "Shift", 2.5),
             ],
             [
-                ("LCONTROL", "Ctrl", 1.5),
-                ("LWIN", "Win", 1.0),
-                ("LMENU", "Alt", 1.0),  # LALT
-                ("SPACE", "Space", 7),
-                ("ALTGR", "AltGr", 1.0),  # RALT / RMENU
-                ("RWIN", "Win", 1.0),
-                ("APPS", "Menu", 1.0),
-                ("RCONTROL", "Ctrl", 1.5),
+                ("Key_LeftControl", "Ctrl", 1.5),
+                ("Key_LeftWin", "Win", 1.0),
+                ("Key_LeftAlt", "Alt", 1.0),
+                ("Key_Space", "Space", 7),
+                ("Key_RightAlt", "AltGr", 1.0),
+                ("Key_FN", "FN", 1.0),
+                ("Key_Apps", "Menu", 1.0),
+                ("Key_RightControl", "Ctrl", 1.5),
             ],
         ],
         "nav": [
-            [("INSERT", "Insert", 1), ("HOME", "Home", 1), ("PRIOR", "PG Up", 1)],
-            [("DELETE", "Delete", 1), ("END", "End", 1), ("NEXT", "PG Down", 1)],
+            [
+                ("Key_Insert", "Ins", 1),
+                ("Key_Home", "Home", 1),
+                ("Key_PageUp", "PG Up", 1),
+            ],
+            [
+                ("Key_Delete", "Del", 1),
+                ("Key_End", "End", 1),
+                ("Key_PageDown", "PG Dwn", 1),
+            ],
             [("", "", 3)],  # Empty row
             [("", "", 3)],  # Empty row
+            [("", "", 1), ("Key_UpArrow", "↑", 1), ("", "", 1)],
             [
-                ("", "", 1),
-                ("UP", "↑", 1),
-                ("", "", 1),
-            ],  # Empty row
-            [
-                ("LEFT", "←", 1),
-                ("DOWN", "↓", 1),
-                ("RIGHT", "→", 1),
+                ("Key_LeftArrow", "←", 1),
+                ("Key_DownArrow", "↓", 1),
+                ("Key_RightArrow", "→", 1),
             ],
         ],
         "numpad": [
             [("", 4)],  # Empty row
             [
-                ("NUMLOCK", "Num Lock", 1),
-                ("DIVIDE", "/", 1),
-                ("MULTIPLY", "*", 1),
-                ("SUBTRACT", "-", 1),
+                ("Key_NumLock", "Num LK", 1),
+                ("Key_Numpad_Divide", "/", 1),
+                ("Key_Numpad_Multiply", "*", 1),
+                ("Key_Numpad_Subtract", "-", 1),
             ],
             [
-                ("NUMPAD7", "7", 1),
-                ("NUMPAD8", "8", 1),
-                ("NUMPAD9", "9", 1),
-                ("ADD", "+", 1, 2),
+                ("Key_Numpad_7", "7", 1),
+                ("Key_Numpad_8", "8", 1),
+                ("Key_Numpad_9", "9", 1),
+                ("Key_Numpad_Add", "+", 1, 2),
             ],  # ADD spans 2 rows
-            [("NUMPAD4", "4", 1), ("NUMPAD5", "5", 1), ("NUMPAD6", "6", 1)],
             [
-                ("NUMPAD1", "1", 1),
-                ("NUMPAD2", "2", 1),
-                ("NUMPAD3", "3", 1),
-                ("NUMPADENTER", "Enter", 1, 2),
+                ("Key_Numpad_4", "4", 1),
+                ("Key_Numpad_5", "5", 1),
+                ("Key_Numpad_6", "6", 1),
+            ],
+            [
+                ("Key_Numpad_1", "1", 1),
+                ("Key_Numpad_2", "2", 1),
+                ("Key_Numpad_3", "3", 1),
+                ("Key_NumpadEnter", "Enter", 1, 2),
             ],  # NUMPADENTER spans 2 rows
-            [("NUMPAD0", "0", 2), ("DECIMAL", ".", 1)],  # NUMPAD0 spans 2 columns
+            [
+                ("Key_Numpad_0", "0", 2),
+                ("Key_Numpad_Decimal", ".", 1),
+            ],  # NUMPAD0 spans 2 columns
         ],
     }
 }
-
 
 # Groups for Elite:Dangerous keybinding
 BINDING_CATEGORIES = {
@@ -646,8 +750,171 @@ BINDING_CATEGORIES = {
         "BuggyTurretPitchDownButton",
         "IncreaseSpeedButtonMax",
         "DecreaseSpeedButtonMax",
-        # "Autopilot" category is removed to be handled via plugins
+        "IncreaseEnginesPower_Buggy",
+        "IncreaseWeaponsPower_Buggy",
+        "IncreaseSystemsPower_Buggy",
+        "ResetPowerDistribution_Buggy",
+        "ToggleCargoScoop_Buggy",
+        "EjectAllCargo_Buggy",
+        "RecallDismissShip",
+        "ToggleDriveAssist",
+        "UIFocus_Buggy",
+        "FocusLeftPanel_Buggy",
+        "FocusCommsPanel_Buggy",
+        "QuickCommsPanel_Buggy",
+        "FocusRadarPanel_Buggy",
+        "FocusRightPanel_Buggy",
+        "GalaxyMapOpen_Buggy",
+        "SystemMapOpen_Buggy",
+        "OpenCodexGoToDiscovery_Buggy",
+        "PlayerHUDModeToggle_Buggy",
+        "HeadLookToggle_Buggy",
+        "PhotoCameraToggle_Buggy",
+        "BuggyToggleReverseThrottleInput",
     ],
+    "OnFoot": [
+        "HumanoidForwardButton",
+        "HumanoidBackwardButton",
+        "HumanoidStrafeLeftButton",
+        "HumanoidStrafeRightButton",
+        "HumanoidRotateLeftButton",
+        "HumanoidRotateRightButton",
+        "HumanoidPitchUpButton",
+        "HumanoidPitchDownButton",
+        "HumanoidSprintButton",
+        "HumanoidCrouchButton",
+        "HumanoidJumpButton",
+        "HumanoidPrimaryInteractButton",
+        "HumanoidSecondaryInteractButton",
+        "HumanoidItemWheelButton",
+        "HumanoidEmoteWheelButton",
+        "HumanoidUtilityWheelCycleMode",
+        "HumanoidPrimaryFireButton",
+        "HumanoidZoomButton",
+        "HumanoidThrowGrenadeButton",
+        "HumanoidMeleeButton",
+        "HumanoidReloadButton",
+        "HumanoidSelectPrimaryWeaponButton",
+        "HumanoidSelectSecondaryWeaponButton",
+        "HumanoidSelectNextWeaponButton",
+        "HumanoidSelectPreviousWeaponButton",
+        "HumanoidHideWeaponButton",
+        "HumanoidToggleFlashlightButton",
+        "HumanoidToggleNightVisionButton",
+        "HumanoidToggleShieldsButton",
+        "HumanoidClearAuthorityLevel",
+        "HumanoidHealthPack",
+        "HumanoidBattery",
+        "HumanoidSelectFragGrenade",
+        "HumanoidSelectEMPGrenade",
+        "HumanoidSelectShieldGrenade",
+        "HumanoidSwitchToRechargeTool",
+        "HumanoidSwitchToCompAnalyser",
+        "HumanoidSwitchToSuitTool",
+        "HumanoidToggleToolModeButton",
+        "HumanoidToggleMissionHelpPanelButton",
+        "GalaxyMapOpen_Humanoid",
+        "SystemMapOpen_Humanoid",
+        "FocusCommsPanel_Humanoid",
+        "QuickCommsPanel_Humanoid",
+        "HumanoidOpenAccessPanelButton",
+        "HumanoidConflictContextualUIButton",
+        "PhotoCameraToggle_Humanoid",
+        "HumanoidEmoteSlot1",
+        "HumanoidEmoteSlot2",
+        "HumanoidEmoteSlot3",
+        "HumanoidEmoteSlot4",
+        "HumanoidEmoteSlot5",
+        "HumanoidEmoteSlot6",
+        "HumanoidEmoteSlot7",
+        "HumanoidEmoteSlot8",
+        "HumanoidWalkButton",
+        "HumanoidItemWheelButton_XLeft",
+        "HumanoidItemWheelButton_XRight",
+        "HumanoidItemWheelButton_YUp",
+        "HumanoidItemWheelButton_YDown",
+        "HumanoidSwitchWeapon",
+        "HumanoidSelectUtilityWeaponButton",
+        "HumanoidSelectNextGrenadeTypeButton",
+        "HumanoidSelectPreviousGrenadeTypeButton",
+        "HumanoidPing",
+    ],
+    "Camera": [
+        "CamPitchUp",
+        "CamPitchDown",
+        "CamYawLeft",
+        "CamYawRight",
+        "CamTranslateForward",
+        "CamTranslateBackward",
+        "CamTranslateLeft",
+        "CamTranslateRight",
+        "CamTranslateUp",
+        "CamTranslateDown",
+        "CamZoomIn",
+        "CamZoomOut",
+        "CamTranslateZHold",
+        "ToggleFreeCam",
+        "FreeCamToggleHUD",
+        "FreeCamSpeedInc",
+        "FreeCamSpeedDec",
+        "ToggleRotationLock",
+        "FixCameraRelativeToggle",
+        "FixCameraWorldToggle",
+        "QuitCamera",
+        "ToggleAdvanceMode",
+        "VanityCameraScrollLeft",
+        "VanityCameraScrollRight",
+        "VanityCameraOne",
+        "VanityCameraTwo",
+        "VanityCameraThree",
+        "VanityCameraFour",
+        "VanityCameraFive",
+        "VanityCameraSix",
+        "VanityCameraSeven",
+        "VanityCameraEight",
+        "VanityCameraNine",
+        "VanityCameraTen",
+        "FreeCamZoomIn",
+        "FreeCamZoomOut",
+        "FStopDec",
+        "FStopInc",
+        "ToggleReverseThrottleInputFreeCam",
+        "MoveFreeCamForward",
+        "MoveFreeCamBackwards",
+        "MoveFreeCamRight",
+        "MoveFreeCamLeft",
+        "MoveFreeCamUp",
+        "MoveFreeCamDown",
+        "PitchCameraUp",
+        "PitchCameraDown",
+        "YawCameraLeft",
+        "YawCameraRight",
+        "RollCameraLeft",
+        "RollCameraRight",
+    ],
+    "Multi-Crew": [
+        "MultiCrewToggleMode",
+        "MultiCrewPrimaryFire",
+        "MultiCrewSecondaryFire",
+        "MultiCrewPrimaryUtilityFire",
+        "MultiCrewSecondaryUtilityFire",
+        "MultiCrewCockpitUICycleForward",
+        "MultiCrewCockpitUICycleBackward",
+        "MultiCrewThirdPersonYawLeftButton",
+        "MultiCrewThirdPersonYawRightButton",
+        "MultiCrewThirdPersonPitchUpButton",
+        "MultiCrewThirdPersonPitchDownButton",
+        "MultiCrewThirdPersonFovOutButton",
+        "MultiCrewThirdPersonFovInButton",
+        "OpenOrders",
+    ],
+    "Store": [
+        "StoreEnableRotation",
+        "StoreCamZoomIn",
+        "StoreCamZoomOut",
+        "StoreToggle",
+    ],
+    # "Autopilot" category is removed to be handled via plugins
 }
 
 # Config parser to load configuration (like themes)
@@ -668,11 +935,12 @@ THEMES = {
         "key_fss": "#6b4a8a",
         "key_camera": "#8a4a6b",
         "key_saa": "#6b8a4a",
-        "key_multicrew": "#8a6b8a",
+        "key_multi-crew": "#8a6b8a",
         "key_store": "#8a8a4a",
         "key_all": "#5a5a5a",
         "key_pressed": "#333333",
         "key_active": "#8a4a4a",  # A distinct color for active keys - used only for debugging :)
+        "key_numlock": "#8a4a4a",  # A distinct color for active keys - used only for debugging :)
     },
     "Dark Mode": {
         "background": "#1e1e1e",
@@ -688,13 +956,71 @@ THEMES = {
 # Get current theme from config, default to 'Default'
 CURRENT_THEME = config.get("Appearance", "theme", fallback="Default")
 
+import logging
+
+def setup_logging(text_edit=None): # Define logging levels here !important for troubleshooting
+    """
+    Configures the logging system with handlers and formatters.
+    Returns the configured 'EDKeysGUI' logger.
+    """
+    
+    # Configure the root logger to avoid duplication
+    logging.getLogger().handlers = []
+    
+    # Create a custom logger
+    logger = logging.getLogger('EDKeysGUI')
+    logger.setLevel(logging.DEBUG)  # Capture all levels
+
+    # Clear any existing handlers
+    logger.handlers = []
+
+    # Create handlers
+    console_handler = logging.StreamHandler()
+    file_handler = logging.FileHandler('edkeysgui.log')
+
+    # Set levels for handlers
+    console_handler.setLevel(logging.INFO)    # INFO and above to console
+    file_handler.setLevel(logging.DEBUG)      # DEBUG and above to file
+
+    # Create formatter and add it to handlers
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
+    file_handler.setFormatter(formatter)
+
+    # Add handlers to the logger
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
+
+    # Add QTextEditLogger if text_edit is provided
+    if text_edit:
+        text_edit_handler = QTextEditLogger(text_edit)
+        text_edit_handler.setLevel(logging.DEBUG)
+        text_edit_handler.setFormatter(formatter)
+        logger.addHandler(text_edit_handler)
+
+    return logger
+
+def is_numlock_on():
+    """
+    Checks if NUM LOCK is currently active.
+
+    :return: True if NUM LOCK is on, False otherwise
+    """
+    VK_NUMLOCK = 0x90
+    user32 = ctypes.WinDLL("User32.dll")
+    return bool(user32.GetKeyState(VK_NUMLOCK) & 1)
+ 
+# Create a console handler with UTF-8 encoding
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.DEBUG)
+console_handler.setStream(sys.stdout)  # Ensure it's using stdout
+
+
 
 class QTextEditLogger(logging.Handler, QObject):
-    """A logging handler that emits log messages to a QTextEdit widget."""
-
     log_signal = pyqtSignal(str)
 
-    def __init__(self, text_edit: QTextEdit):
+    def __init__(self, text_edit):
         logging.Handler.__init__(self)
         QObject.__init__(self)
         self.text_edit = text_edit
@@ -705,88 +1031,56 @@ class QTextEditLogger(logging.Handler, QObject):
         self.log_signal.emit(msg)
 
     def append_log(self, msg):
-        """Appends a log message to the QTextEdit widget."""
         self.text_edit.append(msg)
+
+    def close(self):
+        self.log_signal.disconnect()
+        super().close()
 
 
 class EDKeys:
     """Handles parsing and managing key bindings for Elite: Dangerous."""
 
-    def __init__(self, binds_file):
-        """Initialize by parsing the provided binds file."""
+    binds_file = "main.binds"
+    full_path = os.path.abspath(binds_file)
+
+    def __init__(self, binds_file, logger):
         self.binds_file = binds_file
-        self.bindings = self.parse_binds(
-            binds_file
-        )  # Changed from parse_binds_file to parse_binds
+        self.logger = logger
+        self.logger.info(f"Attempting to load binds file from: {os.path.abspath(binds_file)}")
+        self.bindings = self.parse_binds_file()
 
-    def parse_binds(self, binds_file):
-        """
-        Parses the binds file and returns a dictionary mapping VK codes to actions.
-
-        :param binds_file: Path to the binds file.
-        :return: Dictionary with VK codes as keys and lists of actions as values.
-        """
-        binds = {}
+    def parse_binds_file(self):
+        bindings = {}
         try:
-            tree = ET.parse(binds_file)
+            tree = ET.parse(self.binds_file)
             root = tree.getroot()
-
-            for bind in root.findall("Primary"):  # Adjust the tag if necessary
-                key = bind.get("Key").upper()
-                action = bind.get("Action")  # Ensure 'Action' attribute exists
-                if not action:
-                    logging.warning(
-                        f"No 'Action' attribute found for key '{key}'. Skipping binding."
-                    )
-                    continue  # Skip bindings without an action
-
-                vkcode = VK_CODE.get(key, None)
-                if vkcode:
-                    binds.setdefault(str(vkcode), []).append(action)
-                    logging.debug(
-                        f"Bound action '{action}' to key '{key}' with VK Code {vkcode}"
-                    )
-                else:
-                    logging.warning(f"Key '{key}' not found in VK_CODE mapping.")
+            for binding in root.iter():
+                if binding.tag != 'Root':  # Skip the root element
+                    action = binding.tag
+                    primary = binding.find('Primary')
+                    if primary is not None and primary.get('Key'):
+                        key = primary.get('Key')
+                        if key not in bindings:
+                            bindings[key] = []
+                        bindings[key].append(action)
+                        self.logger.debug(f"Bound {action} to {key}")
+            total_bindings = sum(len(actions) for actions in bindings.values())
+            self.logger.info(f"Total bindings loaded: {total_bindings}")
         except Exception as e:
-            logging.error(f"Error parsing binds file '{binds_file}': {e}")
+            self.logger.error(f"Error parsing binds file: {e}", exc_info=True)
+        return bindings
 
-        return binds
+    def get_bound_actions(self, key):
+        return self.bindings.get(key, [])
 
-    def normalize_key(self, key_name):
-        """
-        Normalizes the key name to match the internal naming convention.
+    def normalize_key(self, key):
+        return key
 
-        :param key_name: The raw key name.
-        :return: Normalized key name.
-        """
-        return key_name.upper()
+    def get_vkcode_for_key(self, key):
+        return VK_CODE.get(key)
 
-    def get_vkcode_for_key(self, key_name):
-        """
-        Retrieves the virtual key code for a given key name.
-
-        :param key_name: The internal key name.
-        :return: Virtual key code.
-        """
-        return VK_CODE.get(key_name, None)
-
-    def get_bound_actions(self, vkcode):
-        """
-        Retrieves all actions bound to the given virtual key code.
-
-        :param vkcode: Virtual key code of the key.
-        :return: List of actions.
-        """
-        actions = self.bindings.get(
-            str(vkcode), []
-        )  # Changed from self.binds to self.bindings
-        # logging.debug(f"Actions bound to VK Code {vkcode}: {actions}")
-        return actions
-
-    def unbind_action(
-        self, action
-    ):  # Removes the specified action from all key bindings.
+    def unbind_action(self, action):
         """
         Removes the specified action from all key bindings.
 
@@ -795,7 +1089,22 @@ class EDKeys:
         for vkcode, actions in self.bindings.items():
             if action in actions:
                 actions.remove(action)
-                logging.info(f"Action '{action}' unbound from vkcode {vkcode}")
+                self.logger.info(f"Action '{action}' unbound from vkcode {vkcode}")
+
+    def generate_key_binding_report(self):  # DEBUG
+        report = []
+        for key_name, vk_code in VK_CODE.items():
+            normalized_key = self.normalize_key(key_name)
+            bound_actions = self.get_bound_actions(str(vk_code))
+            report.append(
+                {
+                    "key_name": key_name,
+                    "normalized_key": normalized_key,
+                    "vk_code": vk_code,
+                    "bound_actions": bound_actions,
+                }
+            )
+        return report
 
 
 class KeyboardGUI(QMainWindow):
@@ -803,141 +1112,258 @@ class KeyboardGUI(QMainWindow):
     The main GUI window for the Keybind Visualizer.
     Displays a visual representation of keyboard bindings and handles user interactions.
     """
+    
+    ### Initial setup(s)
 
-    def __init__(self, ed_keys, base_stylesheet):
-        """
-        Initializes the KeyboardGUI instance.
-
-        :param ed_keys: An instance of the EDKeys class containing key bindings.
-        :param base_stylesheet: The base stylesheet string without QTabBar::tab:selected.
-        """
+    def __init__(self, ed_keys, base_stylesheet, logger):
         super().__init__()
         self.ed_keys = ed_keys
-        self.base_stylesheet = base_stylesheet  # Assign the base_stylesheet
+        self.base_stylesheet = base_stylesheet
+        self.logger = logger  # Use the configured 'EDKeysGUI' logger
 
-        self.key_buttons = {}  # Nested dictionary: {category: {key_name: QPushButton}}
-        self.key_states = {}  # Tracks the pressed state of keys
+        # Initialize attributes 
+        self.key_buttons = {}
         self.base_key_size = 40
         self.is_key_dialog_open = False
         self.held_keys = set()
 
-        self.highlight_active_keys = False  # Flag to toggle active key highlighting
-        self.active_keys = set()  # Set to store keys that respond to keypresses
+        self.highlight_active_keys = False
+        self.active_keys = set()
 
-        self.altgr_active = False  # Flag to track ALTGR state
-
-        # Initialize the refresh timer
-        self.refresh_timer = QTimer(self)
-        self.refresh_timer.timeout.connect(self.refresh_active_keys)
-        self.refresh_timer.setInterval(1000)  # Refresh every 1 second
+        self.altgr_active = False
+        self.show_general_keys = True
 
         self.setFocusPolicy(Qt.StrongFocus)
         self.setStyleSheet("QWidget:focus { outline: none; }")
 
+        # Precompute styles
+        self.precompute_styles()
+
         # Initialize UI components
         self.initUI()
+
+        # Update all keys to set visibility
+        self.update_all_keys()
+        
+        # Schedule verification after the event loop has processed the UI updates
+        QTimer.singleShot(0, self.run_verifications)
+
+        # Initialize key states
         self.initialize_key_states()
+
+        # Update status bar
         self.update_status_bar()
 
-        # Ensure the central widget can receive focus
-        central_widget = self.centralWidget()
-        central_widget.setFocusPolicy(Qt.StrongFocus)
-        central_widget.setFocus()
+        # Set focus to 'All' tab
+        self.tab_widget.setCurrentIndex(0)
 
-        # Alternatively, set focus to the main window
-        self.setFocus()
-        self.centralWidget().setFocus()
-
-        # Set up logging
-        logger = logging.getLogger()
-        logger.setLevel(logging.DEBUG)
-
-        # File handler
-        file_handler = logging.FileHandler("key_log.txt")
-        file_handler.setLevel(logging.DEBUG)
-        file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-        file_handler.setFormatter(file_formatter)
-        logger.addHandler(file_handler)
-
-        # GUI handler
-        self.gui_handler = QTextEditLogger(self.log_text)
-        self.gui_handler.setLevel(logging.DEBUG)
-        gui_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-        self.gui_handler.setFormatter(gui_formatter)
-        logger.addHandler(self.gui_handler)
-
-        # Connect the tab changed signal to update the stylesheet
+        # Connect tab change signal
         self.tab_widget.currentChanged.connect(self.on_tab_changed)
 
-        # Apply the stylesheet for the initially selected tab
+        # Apply stylesheet to selected tab
         self.apply_selected_tab_style(self.tab_widget.currentIndex())
 
-    def initUI(self):
+        # Ensure focus
+        self.centralWidget().setFocusPolicy(Qt.StrongFocus)
+        self.centralWidget().setFocus()
+
+        self.logger.debug("Initialization complete. All tabs should be properly set up.")
+
+        # Initial NUM LOCK status update
+        self.update_num_lock_status()
+
+        # Prevent Tab from changing focus
+        self.setTabOrder(self, self)
+    
+    def precompute_styles(self):
+        """
+        Precomputes and stores styles for each key category based on the current theme.
+        Includes styles for both normal and pressed states.
+        """
+        self.precomputed_styles = {}
+        for category in BINDING_CATEGORIES.keys():
+            color_key = f"key_{category.lower()}"
+            background_color = THEMES.get(CURRENT_THEME, {}).get(color_key, THEMES[CURRENT_THEME].get("key_bound", "#000000"))
+            pressed_color = self.darken_color(background_color)  # Define a function to darken the color
+            
+            self.precomputed_styles[category] = {
+                "normal": f"""
+                    QPushButton {{
+                        background-color: {background_color};
+                        color: {THEMES[CURRENT_THEME]['text']};
+                        border: 1px solid #555555;
+                        border-radius: 3px;
+                        font-weight: bold;
+                        font-size: 10px;
+                        text-align: center;
+                        padding: 2px;
+                    }}
+                """,
+                "pressed": f"""
+                    QPushButton {{
+                        background-color: {pressed_color};
+                        color: {THEMES[CURRENT_THEME]['text']};
+                        border: 1px solid #555555;
+                        border-radius: 3px;
+                        font-weight: bold;
+                        font-size: 10px;
+                        text-align: center;
+                        padding: 2px;
+                    }}
+                """
+            }
+            
+            # Log the assigned colors
+            self.debug_log(
+                category='Style Precomputation',
+                message=f"Category '{category}': Normal color = {background_color}, Pressed color = {pressed_color}.",
+                level='INFO'
+            )
+        
+        # Precompute styles for 'General' category
+        general_color = THEMES.get(CURRENT_THEME, {}).get("key_general", THEMES[CURRENT_THEME].get("key_bound", "#000000"))
+        general_pressed_color = self.darken_color(general_color)
+        self.precomputed_styles["General"] = {
+            "normal": f"""
+                QPushButton {{
+                    background-color: {general_color};
+                    color: {THEMES[CURRENT_THEME]['text']};
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    font-weight: bold;
+                    font-size: 10px;
+                    text-align: center;
+                    padding: 2px;
+                }}
+            """,
+            "pressed": f"""
+                QPushButton {{
+                    background-color: {general_pressed_color};
+                    color: {THEMES[CURRENT_THEME]['text']};
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    font-weight: bold;
+                    font-size: 10px;
+                    text-align: center;
+                    padding: 2px;
+                }}
+            """
+        }
+        self.debug_log(
+            category='Style Precomputation',
+            message=f"Category 'General': Normal color = {general_color}, Pressed color = {general_pressed_color}.",
+            level='INFO'
+        )
+        
+        # Precompute styles for 'Normal' keys (no bindings)
+        normal_color = THEMES.get(CURRENT_THEME, {}).get("key_normal", "#555555")
+        normal_pressed_color = self.darken_color(normal_color)
+        self.precomputed_styles["Normal"] = {
+            "normal": f"""
+                QPushButton {{
+                    background-color: {normal_color};
+                    color: {THEMES[CURRENT_THEME]['text']};
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    font-weight: bold;
+                    font-size: 10px;
+                    text-align: center;
+                    padding: 2px;
+                }}
+            """,
+            "pressed": f"""
+                QPushButton {{
+                    background-color: {normal_pressed_color};
+                    color: {THEMES[CURRENT_THEME]['text']};
+                    border: 1px solid #555555;
+                    border-radius: 3px;
+                    font-weight: bold;
+                    font-size: 10px;
+                    text-align: center;
+                    padding: 2px;
+                }}
+            """
+        }
+        self.debug_log(
+            category='Style Precomputation',
+            message=f"Category 'Normal': Normal color = {normal_color}, Pressed color = {normal_pressed_color}.",
+            level='INFO'
+        )
+        
+        self.debug_log("Style Precomputation", "Precomputed styles for all categories.", level='DEBUG')
+               
+    def initUI(self): # Sets up the user interface components of the GUI.
         """
         Sets up the user interface components of the GUI.
+        This includes creating the main window, menus, and layout.
         """
+        # Set window properties
         self.setWindowTitle(
-            "Elite: Dangerous Keybinds Visualizer v1.2 by glassesinsession"
+            "[Dev build] -- Elite: Dangerous Keybinds Visualizer v1.1B - by @glassesinsession"
         )
-        self.setGeometry(100, 100, 1200, 700)
-        self.setMinimumSize(1200, 700)
-
-        # Apply the current theme
+        self.setGeometry(100, 100, 1200, 400)
+        self.setMinimumSize(1200, 400)
         self.setStyleSheet(
             f"background-color: {THEMES[CURRENT_THEME]['background']}; color: {THEMES[CURRENT_THEME]['text']};"
         )
 
-        # Create menu bar
-        menubar = self.menuBar()
-
-        # Status bar
+        # Create menu bar and status bar
+        self.create_menus()
         self.status_bar = self.statusBar()
-        self.status_bar.showMessage("Ready")
+        
+        # Create and add key_block_status_label to the status bar
         self.key_block_status_label = QLabel()
         self.status_bar.addPermanentWidget(self.key_block_status_label)
 
-        # File menu
-        fileMenu = menubar.addMenu("File")
-        loadBindsAction = QAction("Load Keybind File", self)
-        loadBindsAction.triggered.connect(self.load_bindings)
-        fileMenu.addAction(loadBindsAction)
+        # Set up main layout
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        self.main_layout = QVBoxLayout(central_widget)
 
-        saveBindsAction = QAction("Save Current Bindings", self)
-        saveBindsAction.triggered.connect(self.save_bindings)
-        fileMenu.addAction(saveBindsAction)
+        # Create tab widget
+        self.create_tabs()
+
+    def create_menus(self):
+        """
+        Creates the application's menu bar and adds menu items.
+        """
+        menubar = self.menuBar()
+
+        # File menu
+        file_menu = menubar.addMenu("File")
+        self.add_menu_action(file_menu, "Load Keybind File", self.load_bindings)
+        self.add_menu_action(file_menu, "Save Current Bindings", self.save_bindings)
 
         # View menu
-        viewMenu = menubar.addMenu("View")
-        self.toggle_bindings_action = QAction("Show Bindings", self, checkable=True)
-        self.toggle_bindings_action.setChecked(False)
-        self.toggle_bindings_action.triggered.connect(self.toggle_bindings_text)
-        viewMenu.addAction(self.toggle_bindings_action)
+        view_menu = menubar.addMenu("View")
+        self.toggle_general_keys_action = self.add_menu_action(
+            view_menu, "Show General Keys", self.toggle_general_keys, checkable=True
+        )
+        self.toggle_general_keys_action.setChecked(self.show_general_keys)
+        self.add_menu_action(
+            view_menu, "Show Unbound Actions", self.show_unbound_actions
+        )
 
-        self.show_unbound_actions_action = QAction("Show Unbound Actions", self)
-        self.show_unbound_actions_action.triggered.connect(self.show_unbound_actions)
-        viewMenu.addAction(self.show_unbound_actions_action)
+    def add_menu_action(self, menu, name, slot, checkable=False): # Helper method to add an action to a menu.
+        """
+        Helper method to add an action to a menu.
 
-        # Plugins menu
-        pluginMenu = menubar.addMenu("Plugins")
-        loadPluginAction = QAction("Load Plugin", self)
-        loadPluginAction.triggered.connect(PluginManager.load_plugin)
-        pluginMenu.addAction(loadPluginAction)
+        :param menu: The QMenu to add the action to
+        :param name: The name of the action
+        :param slot: The method to call when the action is triggered
+        :param checkable: Whether the action is checkable
+        :return: The created QAction
+        """
+        action = QAction(name, self)
+        action.triggered.connect(slot)
+        action.setCheckable(checkable)
+        menu.addAction(action)
+        return action
 
-        unloadPluginAction = QAction("Unload Plugin", self)
-        unloadPluginAction.triggered.connect(PluginManager.unload_plugin)
-        pluginMenu.addAction(unloadPluginAction)
-
-        # Main layout with tabs using a splitter
-        splitter = QSplitter(Qt.Horizontal)
-        central_widget = QWidget()
-        splitter.addWidget(central_widget)
-        self.setCentralWidget(splitter)
-
-        # Initialize self.main_layout as an instance attribute
-        self.main_layout = QVBoxLayout(central_widget)
-        central_widget.setLayout(self.main_layout)  # Explicitly set the layout
-
-        # Tab widget
+    def create_tabs(self): # Creates the tab widget and adds keyboard tabs for each category.
+        """
+        Creates the tab widget and adds keyboard tabs for each category.
+        """
         self.tab_widget = QTabWidget()
         self.main_layout.addWidget(self.tab_widget)
 
@@ -946,97 +1372,49 @@ class KeyboardGUI(QMainWindow):
 
         # Add additional category-based tabs
         for category in BINDING_CATEGORIES.keys():
-            self.add_keyboard_tab(
-                category, "QWERTY"
-            )  # Assuming all categories use 'QWERTY' layout
+            self.add_keyboard_tab(category, "QWERTY")
 
-        # Dockable output window for key bindings
-        self.bindings_text = QTextEdit()
-        self.bindings_text.setReadOnly(True)
-        self.bindings_text.setMinimumWidth(300)
-        self.bindings_text.setStyleSheet(
-            f"background-color: {THEMES[CURRENT_THEME]['background']}; color: {THEMES[CURRENT_THEME]['text']};"
-        )
-
-        self.dock_output = QDockWidget("Key Bindings", self)
-        self.dock_output.setWidget(self.bindings_text)
-        splitter.addWidget(self.dock_output)
-        self.dock_output.hide()
-
-        # DEBUG - Showing all recognized keys
-        highlightActiveKeysAction = QAction(
-            "Highlight Active Keys", self, checkable=True
-        )
-        highlightActiveKeysAction.setChecked(False)
-        highlightActiveKeysAction.triggered.connect(self.toggle_active_key_highlight)
-        viewMenu.addAction(highlightActiveKeysAction)
-
-        # Log display widget
+    def initialize_key_states(self):
+        """
+        Initializes the state of each key (pressed or released) to False.
+        """
+        self.key_states = {}
+        for category, keys in self.key_buttons.items():
+            for key_name in keys:
+                self.key_states[key_name] = False
+        self.logger.debug("Initialized all key states to False.")
+    
+    def create_log_display(self): # Creates and sets up the log display widget and clear log button.
+        """
+        Creates and sets up the log display widget and clear log button.
+        """
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
         self.log_text.setStyleSheet("background-color: #1e1e1e; color: #d4d4d4;")
-        self.log_text.setMinimumHeight(150)  # Adjust as needed
-        self.main_layout.addWidget(
-            self.log_text
-        )  # Now correctly using self.main_layout
+        self.log_text.setMinimumHeight(150)
+        self.main_layout.addWidget(self.log_text)
 
-        # Optionally, add a Clear Log button
         self.clear_log_button = QPushButton("Clear Log")
         self.clear_log_button.clicked.connect(self.clear_log)
         self.main_layout.addWidget(self.clear_log_button)
 
-        # Add a new toggle action for global key logging
-        self.globalKeyLoggingAction = QAction(
-            "Enable Global Key Logging", self, checkable=True
-        )
-        self.globalKeyLoggingAction.setChecked(False)
-        self.globalKeyLoggingAction.triggered.connect(self.toggle_global_key_logging)
-        viewMenu.addAction(self.globalKeyLoggingAction)
-
-        reset_button = QPushButton("Reset Active Keys")
-        reset_button.clicked.connect(self.reset_active_keys)
-        self.main_layout.addWidget(reset_button)
-
-    def clear_log(self):
-        """Clears the log display widget."""
+    def clear_log(self): # Clears the log display widget
+        """
+        Clears the log display widget.
+        """
         self.log_text.clear()
         logging.info("Log cleared by user.")
 
-    def apply_theme(self):
-        self.setStyleSheet(
-            f"""
-            QWidget {{
-                background-color: {THEMES[CURRENT_THEME]['background']};
-                color: {THEMES[CURRENT_THEME]['text']};
-            }}
-            QTextEdit, QLineEdit {{
-                background-color: {self.get_lighter_color(THEMES[CURRENT_THEME]['background'])};
-                color: {THEMES[CURRENT_THEME]['text']};
-                border: 1px solid {THEMES[CURRENT_THEME]['key_normal']};
-            }}
-        """
-        )
-        self.update()
-
-    def create_menu(self):
-        """Create the application menu."""
-        menubar = self.menuBar()
-        file_menu = menubar.addMenu("File")
-
-        load_binds_action = QAction("Load Keybind File", self)
-        load_binds_action.triggered.connect(self.load_bindings)
-        file_menu.addAction(load_binds_action)
-
-        save_binds_action = QAction("Save Current Bindings", self)
-        save_binds_action.triggered.connect(self.save_bindings)
-        file_menu.addAction(save_binds_action)
-
-    def add_keyboard_tab(self, category, layout_name):
+    
+    
+    ### Keyboard Tab and Button Management
+    
+    def add_keyboard_tab(self, category, layout_name): # Creates a new tab in the tab widget for the specified category using the given layout.
         """
         Creates a new tab in the tab widget for the specified category using the given layout.
 
-        :param category: The category name (e.g., "All", "Ship", "General").
-        :param layout_name: The layout identifier (e.g., "QWERTY").
+        :param category: The category name (e.g., "All", "Ship", "General")
+        :param layout_name: The layout identifier (e.g., "QWERTY")
         """
         tab = QWidget()
         tab_layout = QVBoxLayout(tab)
@@ -1055,23 +1433,20 @@ class KeyboardGUI(QMainWindow):
         nav_section = self.create_keyboard_section(nav_layout, category, key_size=1.2)
         keyboard_layout.addLayout(nav_section, 15)
 
-        numpad_section = self.create_keyboard_section(
-            numpad_layout, category, key_size=1.2
-        )
+        numpad_section = self.create_keyboard_section(numpad_layout, category, key_size=1.2)
         keyboard_layout.addLayout(numpad_section, 15)
 
         tab_layout.addLayout(keyboard_layout)
         self.tab_widget.addTab(tab, category)
 
-    def create_keyboard_section(self, layout, tab_category, key_size=1.0):
+    def create_keyboard_section(self, layout, tab_category, key_size=1.0): # Creates a section of the keyboard (main, navigation, or numpad).
         """
-        Creates a section of the keyboard layout (e.g., main keyboard, navigation keys, numpad).
+        Creates a section of the keyboard (main, navigation, or numpad).
 
-        :param layout: List of rows, where each row is a list of tuples representing keys.
-                    Each tuple contains (key_name, display_label, size, [optional] row_span).
-        :param tab_category: The category of the current tab.
-        :param key_size: Multiplier to adjust the size of the keys in this section.
-        :return: Configured QGridLayout for the keyboard section.
+        :param layout: The layout data for this section
+        :param tab_category: The category of the current tab
+        :param key_size: The size multiplier for keys in this section
+        :return: A QGridLayout containing the keyboard section
         """
 
         section_layout = QGridLayout()
@@ -1081,239 +1456,463 @@ class KeyboardGUI(QMainWindow):
         for row_idx, key_row in enumerate(layout):
             col_idx = 0
             for key_data in key_row:
-                # Unpack key data with support for optional row_span
-                if len(key_data) == 4:
-                    key_name, display_label, size, row_span = key_data
-                elif len(key_data) == 3:
-                    key_name, display_label, size = key_data
-                    row_span = 1
+                if isinstance(key_data, (tuple, list)):
+                    if len(key_data) == 4:
+                        key_name, display_label, size, row_span = key_data
+                    elif len(key_data) == 3:
+                        key_name, display_label, size = key_data
+                        row_span = 1
+                    else:
+                        key_name, display_label, size, row_span = "", "", key_data[0], 1
                 else:
-                    # Handle unexpected tuple sizes gracefully
-                    key_name, display_label, size, row_span = "", "", key_data[1], 1
+                    # Handle the case where key_data is not a tuple or list
+                    key_name, display_label, size, row_span = "", "", key_data, 1
 
-                # Calculate the number of columns the button should span
-                # Multiply by 2 to preserve half-size keys
+                # Ensure size is a number
+                size = float(size) if isinstance(size, (int, float)) else 1.0
                 col_span = int(size * 2 * key_size)
 
                 if not key_name:
-                    # Create an empty widget for empty areas in the layout
                     empty_widget = QWidget()
-                    empty_widget.setSizePolicy(
-                        QSizePolicy.Expanding, QSizePolicy.Expanding
-                    )
-                    empty_widget.setStyleSheet(
-                        f"background-color: {THEMES[CURRENT_THEME]['background']};"
-                    )
-                    section_layout.addWidget(
-                        empty_widget, row_idx, col_idx, row_span, col_span
-                    )
+                    empty_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                    empty_widget.setStyleSheet(f"background-color: {THEMES[CURRENT_THEME]['background']};")
+                    section_layout.addWidget(empty_widget, row_idx, col_idx, row_span, col_span)
                 else:
-                    # Create the key button with updated logic
-                    button = self.create_key_button(
-                        key_name, display_label, size * key_size, tab_category
-                    )
-                    section_layout.addWidget(
-                        button, row_idx, col_idx, row_span, col_span
-                    )
+                    button = self.create_key_button(key_name, display_label, size * key_size, tab_category)
+                    section_layout.addWidget(button, row_idx, col_idx, row_span, col_span)
 
-                    # Store the button in a nested dictionary for easy access
                     if tab_category not in self.key_buttons:
                         self.key_buttons[tab_category] = {}
                     self.key_buttons[tab_category][key_name] = button
 
+                self.logger.debug(f"Placing '{key_name}' at row {row_idx}, column {col_idx} with colspan {col_span}.") # UNDO to check all keys mapping to the keyboard
                 col_idx += col_span
 
-        # Adjust column stretching to ensure proper spacing
         for i in range(col_idx):
             section_layout.setColumnStretch(i, 1)
 
         return section_layout
 
-    def create_key_button(self, key_name, display_label, size, tab_category):
+    def create_key_button(self, key_name, display_label, size, category):
         """
-        Creates a QPushButton for a specific key.
-
-        :param key_name: Internal name of the key (e.g., "SPACE", "LEFT").
-        :param display_label: Label to display on the button (e.g., "Space", "←").
-        :param size: Size multiplier for the key.
-        :param tab_category: The category of the current tab.
-        :return: Configured QPushButton.
+        Creates a single key button for the keyboard layout.
+        
+        :param key_name: The internal name of the key (e.g., "Key_NumLock")
+        :param display_label: The label to display on the key (e.g., "Num Lock")
+        :param size: The size of the key
+        :param category: The category of the current tab
+        :return: A QPushButton representing the key
         """
-        button = QPushButton()
+        
+        # Instantiate the button first
+        button = QPushButton(display_label)
+        
+        # Set focus policy to NoFocus to prevent buttons from receiving focus
+        button.setFocusPolicy(Qt.NoFocus)
+        
         button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         button.setMinimumSize(int(self.base_key_size * size), self.base_key_size)
 
-        button.setText(display_label)
-
-        normalized_key = self.ed_keys.normalize_key(key_name)
-        vkcode = self.ed_keys.get_vkcode_for_key(normalized_key)
-        bound_actions = self.ed_keys.get_bound_actions(vkcode)
-
-        if tab_category == "All":
-            relevant_actions = bound_actions
-        else:
-            relevant_actions = [
-                action
-                for action in bound_actions
-                if action in BINDING_CATEGORIES.get(tab_category, [])
-                or action in BINDING_CATEGORIES.get("General", [])
-            ]
-
-        categories = self.determine_key_categories(key_name)
-
-        # Determine the highest priority category for color assignment
-        if tab_category != "All" and tab_category in categories:
-            primary_category = tab_category
-        elif "General" in categories:
-            primary_category = "General"
-        else:
-            primary_category = next(
-                iter(categories)
-            )  # Choose any category if not General or tab_category
-
-        if self.highlight_active_keys and key_name in self.active_keys:
-            background_color = THEMES[CURRENT_THEME]["key_active"]
-        elif relevant_actions:
-            key_color_key = f"key_{primary_category.lower()}"
-            background_color = THEMES[CURRENT_THEME].get(
-                key_color_key, THEMES[CURRENT_THEME]["key_bound"]
-            )
-        else:
-            background_color = THEMES[CURRENT_THEME]["key_normal"]
-
-        pressed_color = self.get_lighter_color(background_color)
-
-        button.setStyleSheet(
-            f"""
-            QPushButton {{
-                background-color: {background_color};
-                color: {THEMES[CURRENT_THEME]['text']};
-                border: 1px solid #555555;
-                border-radius: 3px;
-                font-weight: bold;
-                font-size: 10px;
-                text-align: center;
-                padding: 2px;
-            }}
-            QPushButton:pressed {{
-                background-color: {pressed_color};
-            }}
-        """
-        )
-
-        tooltip_text = "\n".join(relevant_actions) if relevant_actions else "Unassigned"
-        if self.highlight_active_keys:
-            tooltip_text += (
-                "\n(Active)" if key_name in self.active_keys else "\n(Inactive)"
-            )
-        button.setToolTip(tooltip_text)
-
-        button.setProperty("all_bound_actions", bound_actions)
-        button.setProperty("relevant_actions", relevant_actions)
+        # **Remove or comment out the event filter installation**
+        # button.installEventFilter(ButtonEventFilter(button))
+        
+        # Retrieve relevant actions
+        bound_actions = self.ed_keys.get_bound_actions(key_name)
+        
+        # Determine primary category
+        primary_category = self.determine_primary_category(bound_actions, category)
+        
+        # Get the appropriate style
+        style = self.get_button_style(primary_category, bound_actions, category, is_pressed=False)
+        button.setStyleSheet(style)
+        
+        # Set properties for later reference
         button.setProperty("primary_category", primary_category)
-
+        button.setProperty("bound_actions", bound_actions)
+        button.setProperty("is_pressed", False)
+        
+        # Set tooltip
+        tooltip = self.create_tooltip(bound_actions, category)
+        button.setToolTip(tooltip)
+        
+        # Connect signals
+        button.pressed.connect(lambda b=button, k=key_name: self.on_button_press(b, k))
+        button.released.connect(lambda b=button, k=key_name: self.on_button_release(b, k))
+        
+        # Add button to the category's button dictionary
+        if category not in self.key_buttons:
+            self.key_buttons[category] = {}
+        self.key_buttons[category][key_name] = button
+        
+        # self.debug_log(  # DEBUG
+        #     category='Button Creation',
+        #     message=f"Created button '{key_name}' in category '{category}'.",
+        #     level='DEBUG'
+        # )
+        
         return button
 
-    def toggle_active_key_highlight(self):
-        self.highlight_active_keys = not self.highlight_active_keys
-        if self.highlight_active_keys:
-            self.refresh_timer.start()
-        else:
-            self.refresh_timer.stop()
-            self.active_keys.clear()  # Clear active keys when turning off the feature
-        self.update_all_key_visuals()
+    def get_button_style(self, primary_category, bound_actions, tab_category, is_pressed=False):
+        """
+        Retrieves the precomputed stylesheet for a key button based on its category and state.
+        
+        :param primary_category: The primary category of the key's bindings
+        :param bound_actions: List of actions bound to this key
+        :param tab_category: The category of the current tab
+        :param is_pressed: Boolean indicating if the key is pressed
+        :return: A stylesheet string for the button
+        """
+        
+        state = "pressed" if is_pressed else "normal"
+        
+        if not bound_actions:
+            return self.precomputed_styles["Normal"][state]
+        
+        if tab_category == "All":
+            return self.precomputed_styles.get(primary_category, {}).get(state, self.precomputed_styles["Normal"][state])
+        
+        if primary_category == "General" or tab_category == "General":
+            if self.show_general_keys or tab_category == "General":
+                return self.precomputed_styles["General"][state]
+        
+        if primary_category == tab_category:
+            return self.precomputed_styles.get(primary_category, {}).get(state, self.precomputed_styles["Normal"][state])
+        
+        return self.precomputed_styles["Normal"][state]
+  
+    def create_tooltip(self, bound_actions, tab_category): # Creates a tooltip for a key button showing its bound actions.
+        """
+        Creates a tooltip for a key button showing its bound actions.
 
-    def toggle_active_key_highlight(
-        self,
-    ):  # Debug function - shows all recognized keys.
-        self.highlight_active_keys = not self.highlight_active_keys
-        if self.highlight_active_keys:
-            self.refresh_timer.start()
-        else:
-            self.refresh_timer.stop()
-            self.active_keys.clear()
-        self.refresh_all_tabs()
+        :param bound_actions: List of actions bound to the key
+        :param tab_category: The category of the current tab
+        :return: A string to use as the button's tooltip
+        """
+        relevant_actions = self.get_relevant_actions(bound_actions, tab_category)
+        if relevant_actions:
+            return "\n".join(relevant_actions)
+        return "Unassigned"
 
-    def refresh_active_keys(self):  # Debug function - shows all recognized keys.
-        if self.highlight_active_keys:
-            self.update_all_key_visuals()
+    def toggle_general_keys(self): # Toggles the visibility of general keys and updates the display.
+        """
+        Toggles the visibility of general keys and updates the display.
+        """
+        self.show_general_keys = not self.show_general_keys
+        self.update_all_keys()
 
-    def apply_text_widget_theme(self, text_widget):
-        """Apply theme to text widgets such as the key bindings output."""
-        text_widget.setStyleSheet(
-            f"background-color: {THEMES[CURRENT_THEME]['background']}; color: {THEMES[CURRENT_THEME]['text']};"
-        )
 
-    def load_bindings(self):
-        """Load a new binds file and refresh the interface."""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Load Keybind File", "", "Bind Files (*.binds *.xml)"
-        )
-        if file_path:
-            self.ed_keys = EDKeys(file_path)
-            self.refresh_all_tabs()
 
-    def save_bindings(self):
-        """Save the current bindings to an XML file."""
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, "Save Keybinds", "", "Bind Files (*.binds *.xml)"
-        )
-        if file_path:
-            self.ed_keys.save_bindings_to_file(file_path)
+    # Key Event Handling and Visual Updates
 
-    def refresh_all_tabs(self):
-        logging.debug("Starting to refresh all tabs")
+    def handle_key_event(self, event, is_press):
+        if event.isAutoRepeat():
+            return
 
-        for index in range(self.tab_widget.count()):
-            tab = self.tab_widget.widget(index)
-            category = self.tab_widget.tabText(index)
+        key = event.key()
+        key_name = self.get_key_name(event)
 
-            # Clear existing layout
-            layout = tab.layout()
-            if layout:
-                self.clear_layout(layout)
+        if key_name:
+            self.track_pressed_keys(key_name, is_press)
+            self.update_key_visual(key_name, is_press)
+            self.debug_log("Key Event", "Key action", key=key_name, action="pressed" if is_press else "released")
+            
+            if key == Qt.Key_Tab:
+                self.debug_log("Tab Key", f"{'Press' if is_press else 'Release'} event handled", 
+                            key_name=key_name, scan_code=event.nativeScanCode())
+            
+            # Handle AltGr
+            if key_name == "Key_RightAlt":  
+                self.handle_altgr_event(is_press)
             else:
-                layout = QVBoxLayout(tab)
+                self.track_pressed_keys(key_name, is_press)
+                self.update_key_visual(key_name, is_press)
+            
+            # Handle NUM LOCK directly
+            if key_name == "Key_NumLock" and not is_press:
+                numlock_on = is_numlock_on()
+                self.update_status_bar_numlock(numlock_on)
 
-            keyboard_layout = QHBoxLayout()
-            keyboard_layout.setSpacing(10)
+        # Allow default behavior for all keys
+        if self.should_block_key(key):
+            event.accept()
+        else:
+            super().keyPressEvent(event) if is_press else super().keyReleaseEvent(event)
 
-            # Fetch the specific layout sections from LAYOUTS
-            main_layout = LAYOUTS["QWERTY"]["main"]
-            nav_layout = LAYOUTS["QWERTY"]["nav"]
-            numpad_layout = LAYOUTS["QWERTY"]["numpad"]
+    def handle_altgr_event(self, is_press): # NEW
+        self.track_pressed_keys("Key_RightAlt", is_press)
+        self.update_key_visual("Key_RightAlt", is_press)
+        
+        # Ensure left Ctrl is not affected
+        if "Key_LeftControl" in self.active_keys:
+            self.active_keys.discard("Key_LeftControl")
+            self.update_key_visual("Key_LeftControl", False)
+        
+    def keyPressEvent(self, event):
+        key = event.key()
+        
+        if key == Qt.Key_Tab:
+            self.handle_key_event(event, True)
+            # Prevent default focus shifting
+            event.accept()
+            return  # Exit to prevent further handling
+        
+        self.handle_key_event(event, True)
+        # print(f"Main window received key press: {event.key()}")  # Debug print
+        
+        super().keyPressEvent(event)
 
-            # Create keyboard sections
-            main_keyboard = self.create_keyboard_section(main_layout, category)
-            keyboard_layout.addLayout(main_keyboard, 70)
+    def keyReleaseEvent(self, event):
+        key = event.key()
+        
+        if key == Qt.Key_Tab:
+            self.handle_key_event(event, False)
+            # Prevent default focus shifting
+            event.accept()
+            return  # Exit to prevent further handling
+        
+        self.handle_key_event(event, False)
+        
+        super().keyReleaseEvent(event)
+          
+    def get_key_name(self, event):
+        """
+        Determines the name of the key from a key event.
+        
+        :param event: The key event from Qt
+        :return: The name of the key as a string
+        """
+        key = event.key()
+        modifiers = event.modifiers()
+        scan_code = event.nativeScanCode()
 
-            nav_section = self.create_keyboard_section(
-                nav_layout, category, key_size=1.2
-            )
-            keyboard_layout.addLayout(nav_section, 15)
+        # Special handling for NUM LOCK
+        if key == Qt.Key_NumLock:
+            return "Key_NumLock"
+        
+        # Special handling for AltGr
+        if scan_code == 312:  # AltGr scan code
+            return "Key_RightAlt"
 
-            numpad_section = self.create_keyboard_section(
-                numpad_layout, category, key_size=1.2
-            )
-            keyboard_layout.addLayout(numpad_section, 15)
+        # Handle modifier keys
+        if key in [Qt.Key_Shift, Qt.Key_Control, Qt.Key_Alt, Qt.Key_Meta]:
+            if scan_code in SCAN_CODE_MAPPING:
+                return SCAN_CODE_MAPPING[scan_code]
+            elif key == Qt.Key_Shift:
+                return "Key_LeftShift" if scan_code == 42 else "Key_RightShift"
+            elif key == Qt.Key_Control:
+                return "Key_LeftControl" if scan_code == 29 else "Key_RightControl"
+            elif key == Qt.Key_Alt:
+                return "Key_LeftAlt" if scan_code == 56 else "Key_RightAlt"
+            # elif key == Qt.Key_Meta:
+            #     return "Key_LeftWin" if scan_code == 91 else "Key_RightWin"
+    
+        # Handle numpad keys
+        if modifiers & Qt.KeypadModifier:
+            numpad_mapping = {
+                Qt.Key_0: "Key_Numpad_0",
+                Qt.Key_1: "Key_Numpad_1",
+                Qt.Key_2: "Key_Numpad_2",
+                Qt.Key_3: "Key_Numpad_3",
+                Qt.Key_4: "Key_Numpad_4",
+                Qt.Key_5: "Key_Numpad_5",
+                Qt.Key_6: "Key_Numpad_6",
+                Qt.Key_7: "Key_Numpad_7",
+                Qt.Key_8: "Key_Numpad_8",
+                Qt.Key_9: "Key_Numpad_9",
+                Qt.Key_Asterisk: "Key_Numpad_Multiply",
+                Qt.Key_Plus: "Key_Numpad_Add",
+                Qt.Key_Minus: "Key_Numpad_Subtract",
+                Qt.Key_Period: "Key_Numpad_Decimal",
+                Qt.Key_Slash: "Key_Numpad_Divide",
+                Qt.Key_Enter: "Key_NumpadEnter",
+            }
+            return numpad_mapping.get(key, None)
 
-            layout.addLayout(keyboard_layout)
-            logging.debug(f"Refreshed tab '{category}'")
+        # Use the KEY_MAPPING for other keys
+        key_name = KEY_MAPPING.get(key)
+        if key_name:
+            return key_name
 
-        logging.debug("Finished refreshing all tabs")
+        # If not found in KEY_MAPPING, use the text
+        text = event.text().upper()
+        if text:
+            return f"Key_{text}"
 
-    def clear_layout(self, layout):
-        while layout.count():
-            child = layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
-            elif child.layout():
-                self.clear_layout(child.layout())
+        # If still not found, log the unmapped key
+        logging.warning(f"Unmapped key: Qt Key {key}, Scan Code {scan_code}")
+        return None
 
-    def get_lighter_color(self, color):
+    def should_block_key(self, key): # Determines if a key's default behavior should be blocked.
+        """
+        Determines if a key's default behavior should be blocked.
+        
+        :param key: The key code
+        :return: Boolean indicating if the key should be blocked
+        """
+        blocked_keys = [
+            Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down,
+            Qt.Key_PageUp, Qt.Key_PageDown, Qt.Key_Home, Qt.Key_End,
+            Qt.Key_Return, Qt.Key_Enter, Qt.Key_Space
+        ]
+        return key in blocked_keys
+
+    def prevent_tab_focus_change(self, old_focus_widget):
+        """
+        Prevents focus change when Tab is pressed and returns focus to the previous widget.
+        
+        :param old_focus_widget: The widget that had focus before Tab was pressed
+        """
+        if old_focus_widget and self.focusWidget() != old_focus_widget:
+            old_focus_widget.setFocus()
+
+    def update_key_visual(self, key_name, is_pressed):
+        """
+        Updates the visual state of a key button.
+        
+        :param key_name: The name of the key to update
+        :param is_pressed: Boolean indicating if the key is pressed
+        """
+        # self.debug_log("Visual Update", f"Updating key visual for {key_name} - pressed: {is_pressed}") # DEBUG
+        
+        current_tab = self.tab_widget.tabText(self.tab_widget.currentIndex())
+        categories_to_check = ["All", current_tab]
+
+        for category in categories_to_check:
+            if category in self.key_buttons and key_name in self.key_buttons[category]:
+                button = self.key_buttons[category][key_name]
+                if button.isVisible():
+                    primary_category = button.property("primary_category")
+                    bound_actions = button.property("bound_actions")
+                    
+                    # Special handling for AltGr
+                    if key_name == "Key_RightAlt" and is_pressed:
+                        # Ensure left Ctrl is not visually pressed when AltGr is pressed
+                        if "Key_LeftControl" in self.key_buttons[category]:
+                            left_ctrl_button = self.key_buttons[category]["Key_LeftControl"]
+                            left_ctrl_style = self.get_button_style(
+                                left_ctrl_button.property("primary_category"),
+                                left_ctrl_button.property("bound_actions"),
+                                current_tab,
+                                is_pressed=False
+                            )
+                            left_ctrl_button.setStyleSheet(left_ctrl_style)
+                            left_ctrl_button.update()
+
+                    # Update the style for the current key
+                    style = self.get_button_style(
+                        primary_category,
+                        bound_actions,
+                        current_tab,
+                        is_pressed=is_pressed
+                    )
+                    button.setStyleSheet(style)
+                    button.update()
+                    
+                    # self.debug_log("Visual Update", f"Updated {key_name} in category {category}", style=style)
+                    return  # Exit after updating the button
+                else:
+                    self.debug_log("Visual Update", f"Button for {key_name} in category {category} is not visible")
+        
+        self.debug_log("Visual Update", f"Key {key_name} not found or not visible in current tab or All tab")
+    
+    def track_pressed_keys(self, key_name, is_pressed):
+        if is_pressed:
+            self.active_keys.add(key_name)
+            if key_name == "Key_RightAlt":
+                self.active_keys.discard("Key_LeftControl")
+        else:
+            self.active_keys.discard(key_name)
+        
+        logging.debug(f"Active keys updated. Currently pressed: {self.active_keys}")
+              
+    # def update_button_state(self, button, is_pressed):
+    #     """
+    #     Updates the visual state of a key button.
+        
+    #     :param button: The QPushButton representing the key
+    #     :param is_pressed: Boolean indicating if the key is pressed
+    #     """
+    #     primary_category = button.property("primary_category")
+    #     relevant_actions = button.property("relevant_actions")
+    #     tab_category = self.tab_widget.tabText(self.tab_widget.currentIndex())
+        
+    #     # Fetch the appropriate style using get_button_style
+    #     style = self.get_button_style(primary_category, relevant_actions, tab_category, is_pressed=is_pressed)
+        
+    #     # Ensure that 'style' is a string before applying
+    #     if isinstance(style, str):
+    #         button.setStyleSheet(style)
+    #         button.update()
+    #         self.debug_log("Button Update", f"Button state updated", background_color=style, is_pressed=is_pressed)
+    #     else:
+    #         logging.error(f"Expected a stylesheet string, but got {type(style)} for button '{button.text()}'.")
+ 
+    def update_button_state(self, button, is_pressed):
+        """
+        Updates the visual state of a key button.
+        
+        :param button: The QPushButton representing the key
+        :param is_pressed: Boolean indicating if the key is pressed
+        :return: True if the button style was changed, False otherwise
+        """
+        primary_category = button.property("primary_category")
+        relevant_actions = button.property("relevant_actions")
+        tab_category = self.tab_widget.tabText(self.tab_widget.currentIndex())
+        
+        old_style = button.styleSheet()
+        new_style = self.get_button_style(primary_category, relevant_actions, tab_category, is_pressed=is_pressed)
+        
+        if old_style != new_style:
+            button.setStyleSheet(new_style)
+            button.update()
+            return True
+        return False
+    
+    def create_pressed_style(self, original_style): # Creates a 'pressed' style for a button based on its original style.
+        """
+        Creates a 'pressed' style for a button based on its original style.
+        
+        :param original_style: The original stylesheet of the button
+        :return: A new stylesheet for the button's pressed state
+        """
+        bg_color = None
+        for rule in original_style.split(';'):
+            if 'background-color:' in rule:
+                bg_color = rule.split(':')[1].strip()
+                break
+
+        if bg_color:
+            darker_color = self.darken_color(bg_color)
+            pressed_style = original_style.replace(f"background-color: {bg_color}", f"background-color: {darker_color}")
+        else:
+            pressed_style = original_style
+
+        return pressed_style
+
+    def darken_color(self, color): # Darkens a given color by reducing its RGB values.
+        """
+        Darkens a given color by reducing its RGB values.
+        
+        :param color: The original color in hex format
+        :return: The darkened color in hex format
+        """
+        color = color.lstrip('#')
+        r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
+        r = max(int(r * 0.8), 0)
+        g = max(int(g * 0.8), 0)
+        b = max(int(b * 0.8), 0)
+        return f"#{r:02x}{g:02x}{b:02x}"
+
+    def lighter_color(self, color): # Calculates a lighter shade of the given color.
+        """
+        Calculates a lighter shade of the given color.
+        
+        :param color: Hex color string (e.g., '#555555').
+        :return: Hex color string for the lighter shade.
+        """
         # Convert hex to RGB
-        color = color.lstrip("#")
-        r, g, b = tuple(int(color[i : i + 2], 16) for i in (0, 2, 4))
+        color = color.lstrip('#')
+        r, g, b = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
 
         # Increase each component by 20%, but not exceeding 255
         r = min(int(r * 1.2), 255)
@@ -1321,757 +1920,93 @@ class KeyboardGUI(QMainWindow):
         b = min(int(b * 1.2), 255)
 
         # Convert back to hex
-        return f"#{r:02x}{g:02x}{b:02x}"
+        return f'#{r:02x}{g:02x}{b:02x}'
 
-    def initialize_key_states(self):
-        """
-        Initializes the state of each key (pressed or released) to False.
-        """
-        for category, keys in self.key_buttons.items():
-            for key in keys:
-                self.key_states[key] = False
-        logging.debug("Initialized all key states to False.")
 
-    def update_status_bar(self):
-        if self.is_key_dialog_open:
-            status = "Keys Unblocked (Dialog Open)"
-            color = "green"
-        else:
-            status = "Keys Blocked (Main Interface)"
-            color = "red"
-        self.key_block_status_label.setText(f"<font color='{color}'>{status}</font>")
-        logging.debug(f"Status bar updated: {status}")
 
-    def toggle_bindings_text(
-        self, checked
-    ):  # Toggles the visibility of the bindings output dock.
-        """
-        Toggles the visibility of the bindings output dock.
+    # Key Updates and Tab Handling
 
-        :param checked: Boolean indicating if the action is checked.
-        """
-        if checked:
-            self.dock_output.show()
-            logging.debug("Bindings dock shown.")
-        else:
-            self.dock_output.hide()
-            logging.debug("Bindings dock hidden.")
-
-    def show_unbound_actions(
-        self,
-    ):  # Displays a dialog listing all unbound actions across categories. - TODO: Layout
-        """
-        Displays a dialog listing all unbound actions across categories.
-        """
-        unbound_actions = self.get_unbound_actions()
-        if not any(unbound_actions.values()):
-            QMessageBox.information(
-                self, "Unbound Actions", "All actions are currently bound to keys."
-            )
-            logging.info("All actions are bound.")
-            return
-
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Unbound Actions")
-        dialog.setMinimumSize(800, 600)
-        layout = QVBoxLayout(dialog)
-
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_content = QWidget()
-        scroll_layout = QHBoxLayout(scroll_content)
-
-        for category, actions in unbound_actions.items():
-            if actions:
-                group_layout = QVBoxLayout()
-                category_label = QLabel(f"<h3>{category}</h3>")
-                group_layout.addWidget(category_label)
-                for action in actions:
-                    action_label = QLabel(f"- {action}")
-                    group_layout.addWidget(action_label)
-                scroll_layout.addLayout(group_layout)
-
-        scroll_area.setWidget(scroll_content)
-        layout.addWidget(scroll_area)
-
-        close_button = QPushButton("Close")
-        close_button.clicked.connect(dialog.accept)
-        layout.addWidget(close_button)
-
-        dialog.exec_()
-        logging.debug("Displayed unbound actions dialog.")
-
-    def get_unbound_actions(
-        self,
-    ):  # Retrieves all actions that are not currently bound to any key.
-        """
-        Retrieves all actions that are not currently bound to any key.
-
-        :return: Dictionary mapping categories to their respective unbound actions.
-        """
-        unbound = {}
-        all_bound_actions = set()
-        for actions in self.ed_keys.bindings.values():
-            all_bound_actions.update(actions)
-
-        for category, actions in BINDING_CATEGORIES.items():
-            unbound_actions = [
-                action for action in actions if action not in all_bound_actions
-            ]
-            if unbound_actions:
-                unbound[category] = unbound_actions
-
-        logging.debug(f"Unbound actions: {unbound}")
-        return unbound
-
-    def assign_key(self, key_name):
-        """
-        Opens a dialog to assign or unbind actions to a specific key.
-
-        :param key_name: Key name to assign actions to.
-        """
-        self.is_key_dialog_open = True
-        self.update_status_bar()
-
+    def update_all_keys(self):
         current_tab = self.tab_widget.tabText(self.tab_widget.currentIndex())
-
-        category_order = ["General"] + [
-            self.tab_widget.tabText(i)
-            for i in range(self.tab_widget.count())
-            if self.tab_widget.tabText(i) not in ["All", "General"]
-        ]
-
-        if current_tab == "All":
-            relevant_categories = category_order
-        else:
-            relevant_categories = [current_tab, "General"]
-
-        actions = []
-        subcategories = {}
-        for category in relevant_categories:
-            for action in BINDING_CATEGORIES.get(category, []):
-                actions.append(action)
-                subcategories[action] = category
-
-        normalized_key = self.ed_keys.normalize_key(key_name)
-        vkcode = self.ed_keys.get_vkcode_for_key(normalized_key)
-        current_bindings = self.ed_keys.get_bound_actions(vkcode)
-
-        available_actions = actions
-
-        dialog = QDialog(self)
-        dialog.setWindowTitle(f"Assign Key '{key_name}'")
-        dialog.setMinimumSize(500, 400)
-        layout = QVBoxLayout(dialog)
-
-        tree = QTreeWidget()
-        tree.setHeaderHidden(True)
-        tree.setSelectionMode(QTreeWidget.MultiSelection)
-        category_items = {}
-        for category in relevant_categories:
-            if category in set(subcategories.values()):
-                category_item = QTreeWidgetItem([category])
-                tree.addTopLevelItem(category_item)
-                category_items[category] = category_item
-
-        for action in sorted(available_actions):
-            sub_item = QTreeWidgetItem([action])
-            category = subcategories.get(action, "Unknown")
-            category_items[category].addChild(sub_item)
-            if action in current_bindings:
-                sub_item.setCheckState(0, Qt.Checked)
-                font = QFont()
-                font.setBold(True)
-                sub_item.setFont(0, font)
-            else:
-                sub_item.setCheckState(0, Qt.Unchecked)
-
-        tree.expandAll()
-        layout.addWidget(tree)
-
-        button_layout = QHBoxLayout()
-
-        # Define buttons before connecting signals
-        assign_button = QPushButton("Assign Selected")
-        unbind_button = QPushButton("Unbind Selected")
-        close_button = QPushButton("Close")
-
-        button_layout.addWidget(assign_button)
-        button_layout.addWidget(unbind_button)
-        button_layout.addWidget(close_button)
-        layout.addLayout(button_layout)
-
-        # Define slot functions within the method
-        def on_assign():
-            selected_items = tree.selectedItems()
-            if not selected_items:
-                QMessageBox.warning(
-                    dialog, "No Selection", "No actions were selected to assign."
-                )
-                return
-            for item in selected_items:
-                action = item.text(0)
-                if action not in self.ed_keys.bindings.get(vkcode, []):
-                    self.ed_keys.unbind_action(action)
-                    self.ed_keys.bindings.setdefault(vkcode, []).append(action)
-            self.refresh_all_tabs()
-            self.status_bar.showMessage(
-                f"Assigned selected actions to key '{key_name}'."
-            )
-            logging.info(f"Assigned actions to key '{key_name}': {selected_items}")
-            dialog.accept()
-
-        def on_unbind():
-            selected_items = tree.selectedItems()
-            if not selected_items:
-                QMessageBox.warning(
-                    dialog, "No Selection", "No actions were selected to unbind."
-                )
-                return
-            for item in selected_items:
-                action = item.text(0)
-                if action in self.ed_keys.bindings.get(vkcode, []):
-                    self.ed_keys.bindings[vkcode].remove(action)
-            self.refresh_all_tabs()
-            self.status_bar.showMessage(
-                f"Unbound selected actions from key '{key_name}'."
-            )
-            logging.info(f"Unbound actions from key '{key_name}': {selected_items}")
-            dialog.accept()
-
-        def on_dialog_close():
-            self.is_key_dialog_open = False
-            self.update_status_bar()
-            logging.debug("Key assignment dialog closed.")
-            dialog.reject()
-
-        # Connect signals after defining buttons and slots
-        assign_button.clicked.connect(on_assign)
-        unbind_button.clicked.connect(on_unbind)
-        close_button.clicked.connect(on_dialog_close)
-
-        dialog.finished.connect(lambda: setattr(self, "is_key_dialog_open", False))
-        dialog.finished.connect(self.update_status_bar)
-
-        dialog.exec_()
-
-    def update_key_button(self, key_name, category):
-        """
-        Updates the visual state and tooltip of a specific key button based on its bindings.
-
-        :param key_name: Key name to update.
-        :param category: Binding category of the key.
-        """
-        button = self.find_key_button(key_name, category)
-        if button:
-            normalized_key = self.ed_keys.normalize_key(key_name)
-            vkcode = self.ed_keys.get_vkcode_for_key(normalized_key)
-            all_bound_actions = self.ed_keys.get_bound_actions(vkcode)
-
-            if category == "All":
-                relevant_actions = all_bound_actions
-            else:
-                relevant_actions = [
-                    a
-                    for a in all_bound_actions
-                    if a in BINDING_CATEGORIES.get(category, [])
-                    or a in BINDING_CATEGORIES.get("General", [])
-                ]
-
-            categories = self.determine_key_categories(key_name)
-
-            # Determine the highest priority category for color assignment
-            if category != "All" and category in categories:
-                primary_category = category
-            elif "General" in categories:
-                primary_category = "General"
-            else:
-                primary_category = next(
-                    iter(categories)
-                )  # Choose any category if not General or tab_category
-
-            has_binding = bool(relevant_actions)
-            is_general = primary_category == "General"
-
-            button.setProperty("all_bound_actions", all_bound_actions)
-            button.setProperty("relevant_actions", relevant_actions)
-            button.setProperty("primary_category", primary_category)
-
-            button.setStyleSheet(
-                self.get_button_style(False, has_binding, primary_category, is_general)
-            )
-            tooltip_text = (
-                "\n".join(
-                    self.order_actions_by_category(relevant_actions, primary_category)
-                )
-                if relevant_actions
-                else "Unassigned"
-            )
-            button.setToolTip(tooltip_text)
-            logging.debug(
-                f"Updated button '{key_name}': has_binding={has_binding}, category={primary_category}"
-            )
-
-    def update_key_visual(self, key_name, is_pressed):
-        current_category = self.tab_widget.tabText(self.tab_widget.currentIndex())
-        categories = ["All", current_category] if current_category != "All" else ["All"]
-
-        for category in categories:
-            if category in self.key_buttons and key_name in self.key_buttons[category]:
-                button = self.key_buttons[category][key_name]
-                if button.isVisible():
-                    button.setDown(is_pressed)
-
-                    if self.highlight_active_keys:
-                        if is_pressed:
-                            self.active_keys.add(key_name)
-                        self.update_key_style(button, key_name in self.active_keys)
-                    else:
-                        self.update_key_style(button, is_pressed)
-
-                    logging.debug(
-                        f"Updated visual for key: {key_name}, pressed: {is_pressed}, category: {category}"
-                    )
-                    break  # Exit after updating the first visible button
-
-    def reset_active_keys(self):
-        self.active_keys.clear()
-        self.update_all_key_visuals()
-
-    def update_all_key_visuals(self):
-        for category in self.key_buttons:
-            for key_name, button in self.key_buttons[category].items():
-                self.update_key_style(button, key_name in self.active_keys)
-
-    def update_key_style(self, button, is_active_or_pressed):
-        has_binding = bool(button.property("relevant_actions"))
-        primary_category = button.property("primary_category")
-
-        if self.highlight_active_keys:
-            if is_active_or_pressed:
-                background_color = THEMES[CURRENT_THEME]["key_active"]
-            elif has_binding:
-                key_color_key = f"key_{primary_category.lower()}"
-                background_color = THEMES[CURRENT_THEME].get(
-                    key_color_key, THEMES[CURRENT_THEME]["key_bound"]
-                )
-            else:
-                background_color = THEMES[CURRENT_THEME]["key_normal"]
-        else:
-            if is_active_or_pressed:
-                background_color = THEMES[CURRENT_THEME]["key_pressed"]
-            elif has_binding:
-                key_color_key = f"key_{primary_category.lower()}"
-                background_color = THEMES[CURRENT_THEME].get(
-                    key_color_key, THEMES[CURRENT_THEME]["key_bound"]
-                )
-            else:
-                background_color = THEMES[CURRENT_THEME]["key_normal"]
-
-        button.setStyleSheet(
-            f"""
-            QPushButton {{
-                background-color: {background_color};
-                color: {THEMES[CURRENT_THEME]['text']};
-                border: 1px solid #555555;
-                border-radius: 3px;
-                font-weight: bold;
-                font-size: 10px;
-                text-align: center;
-                padding: 2px;
-            }}
-        """
-        )
-
-        # Update tooltip
-        tooltip_text = button.toolTip().split("\n")[0]  # Keep only the first line
-        if self.highlight_active_keys:
-            tooltip_text += "\n(Active)" if is_active_or_pressed else ""
-        else:
-            tooltip_text += "\n(Pressed)" if is_active_or_pressed else ""
-        button.setToolTip(tooltip_text)
-
-    def find_key_button(
-        self, key_name, category
-    ):  # Finds the QPushButton object corresponding to a given key name and category.
-        """
-        Finds the QPushButton object corresponding to a given key name and category.
-
-        :param key_name: Key name to search for.
-        :param category: Binding category.
-        :return: QPushButton object or None if not found.
-        """
-        for index in range(self.tab_widget.count()):
-            tab = self.tab_widget.widget(index)
-            tab_category = self.tab_widget.tabText(index)
-            if tab_category != category and category != "All":
-                continue
-            for btn_key, button in self.key_buttons.items():
-                if btn_key == key_name and button.property("category") == category:
-                    return button
-        return None
-
-    def get_button_style(self, is_pressed, has_binding, category, is_general=False):
-        """
-        Generates the stylesheet for a key button based on its state and category.
-
-        :param is_pressed: Boolean indicating if the key is pressed.
-        :param has_binding: Boolean indicating if the key has bindings.
-        :param category: Binding category of the key.
-        :param is_general: Boolean indicating if the key is in the 'General' category.
-        :return: Stylesheet string.
-        """
-        if has_binding:
-            if category.lower() in THEMES[CURRENT_THEME]:
-                background_color = THEMES[CURRENT_THEME][f"key_{category.lower()}"]
-            else:
-                background_color = THEMES[CURRENT_THEME]["key_bound"]
-        else:
-            background_color = THEMES[CURRENT_THEME]["key_normal"]
-
-        if is_pressed:
-            background_color = self.get_pressed_color(background_color)
-
-        style = f"""
-            QPushButton {{
-                background-color: {background_color};
-                color: {THEMES[CURRENT_THEME]['text']};
-                border: 1px solid #555555;
-                border-radius: 3px;
-                font-weight: bold;
-                font-size: 10px;
-                text-align: center;
-                padding: 2px;
-            }}
-        """
-        if is_pressed:
-            style += f"""
-                QPushButton:pressed {{
-                    background-color: {THEMES[CURRENT_THEME]['key_pressed']};
-                }}
-            """
-        return style
-
-    def get_pressed_color(
-        self, color
-    ):  # Calculates a lighter shade of the given color for the pressed state.
-        """
-        Calculates a lighter shade of the given color for the pressed state.
-
-        :param color: Hex color string (e.g., '#555555').
-        :return: Hex color string for the pressed state.
-        """
-        try:
-            color = color.lstrip("#")
-            r, g, b = int(color[0:2], 16), int(color[2:4], 16), int(color[4:6], 16)
-            r = min(int(r * 1.3), 255)
-            g = min(int(g * 1.3), 255)
-            b = min(int(b * 1.3), 255)
-            pressed_color = f"#{r:02x}{g:02x}{b:02x}"
-            logging.debug(f"Pressed color for '{color}': {pressed_color}")
-            return pressed_color
-        except Exception as e:
-            logging.error(f"Error in get_pressed_color with color '{color}': {e}")
-            return color
-
-    def order_actions_by_category(
-        self, actions, current_category
-    ):  # Orders actions by the current category followed by others.
-        """
-        Orders actions by the current category followed by others.
-
-        :param actions: List of action names.
-        :param current_category: Current binding category.
-        :return: Ordered list of action names.
-        """
-        current_cat_actions = [
-            action
-            for action in actions
-            if action in BINDING_CATEGORIES.get(current_category, [])
-        ]
-        other_actions = [
-            action for action in actions if action not in current_cat_actions
-        ]
-        ordered_actions = current_cat_actions + other_actions
-        logging.debug(f"Ordered actions: {ordered_actions}")
-        return ordered_actions
-
-    def determine_key_categories(self, key_name):
-        """
-        Determines all categories a key belongs to based on its bound actions.
-
-        :param key_name: The name of the key.
-        :return: Set of categories as strings.
-        """
-        categories = set()
-        normalized_key = self.ed_keys.normalize_key(key_name)
-        vkcode = self.ed_keys.get_vkcode_for_key(normalized_key)
-        bound_actions = self.ed_keys.get_bound_actions(vkcode)
-
-        for action in bound_actions:
-            for category, actions in BINDING_CATEGORIES.items():
-                if action in actions:
-                    categories.add(category)
-
-        if not categories:
-            categories.add("General")  # Default category if no bindings found
-
-        return categories
-
-    def determine_specific_category(self, actions, tab_category):
-        categories = set()
-        for action in actions:
-            for cat, cat_actions in BINDING_CATEGORIES.items():
-                if action in cat_actions:
-                    categories.add(cat)
-                    break
-
-        if categories == {"General"} or not categories:
-            return "General"
-        elif len(categories) == 1:
-            return categories.pop()
-        else:
-            non_general_categories = categories - {"General"}
-            if tab_category != "All" and tab_category in non_general_categories:
-                return tab_category
-            else:
-                return (
-                    next(iter(non_general_categories))
-                    if non_general_categories
-                    else "General"
-                )
-
-    def keyPressEvent(self, event):
-        if event.isAutoRepeat():
-            return
-
-        key = event.key()
-        key_name = self.get_key_name(event)
-
-        if key_name:
-            self.key_states[key_name] = True
-            logging.info(f"Key pressed - Key Name: {key_name}")
-            self.update_key_visual(key_name, True)
-
-        if self.should_block_key(key):
-            event.accept()
-        else:
-            super().keyPressEvent(event)
-
-    def keyReleaseEvent(self, event):
-        if event.isAutoRepeat():
-            return
-
-        key = event.key()
-        key_name = self.get_key_name(event)
-
-        if key_name:
-            self.key_states[key_name] = False
-            logging.info(f"Key released - Key Name: {key_name}")
-            self.update_key_visual(key_name, False)
-
-        if self.should_block_key(key):
-            event.accept()
-        else:
-            super().keyReleaseEvent(event)
-
-    def get_key_name(self, event):
-        key = event.key()
-        scan_code = event.nativeScanCode()
-        text = event.text()
-        logging.debug(
-            f"Key pressed - Qt Key: {key}, Scan Code: {scan_code}, Text: '{text}'"
-        )
-
-        # Handle modifier keys based on scan codes
-        if key == Qt.Key_Shift:
-            key_name = "LSHIFT" if scan_code == 42 else "RSHIFT"
-        elif key == Qt.Key_Control:
-            key_name = "LCONTROL" if scan_code == 29 else "RCONTROL"
-        elif key == Qt.Key_Alt:
-            if scan_code == 56:  # Left Alt
-                key_name = "LMENU"
-            elif scan_code == 100:  # Right Alt (AltGr)
-                key_name = "RMENU"  # or "ALTGR"
-            else:
-                key_name = "ALT"  # Generic fallback
-        elif key == Qt.Key_Meta:
-            key_name = "RWIN" if scan_code == 91 else "LWIN"
-        elif key == Qt.Key_NumLock:
-            key_name = "NUMLOCK"
-        elif key == Qt.Key_Tab:  # Please work.
-            key_name = "TAB"
-            logging.debug(f"Tab key detected. Key: {key}, Scan Code: {scan_code}")
-        else:
-            # Handle numpad keys
-            if event.modifiers() & Qt.KeypadModifier:
-                numpad_map = {
-                    Qt.Key_0: "NUMPAD0",
-                    Qt.Key_1: "NUMPAD1",
-                    Qt.Key_2: "NUMPAD2",
-                    Qt.Key_3: "NUMPAD3",
-                    Qt.Key_4: "NUMPAD4",
-                    Qt.Key_5: "NUMPAD5",
-                    Qt.Key_6: "NUMPAD6",
-                    Qt.Key_7: "NUMPAD7",
-                    Qt.Key_8: "NUMPAD8",
-                    Qt.Key_9: "NUMPAD9",
-                    Qt.Key_Plus: "ADD",
-                    Qt.Key_Minus: "SUBTRACT",
-                    Qt.Key_Asterisk: "MULTIPLY",
-                    Qt.Key_Slash: "DIVIDE",
-                    Qt.Key_Period: "DECIMAL",
-                    Qt.Key_Return: "NUMPADENTER",
-                    Qt.Key_Enter: "NUMPADENTER",
-                }
-                key_name = numpad_map.get(key, "")
-                if key_name:
-                    logging.debug(f"Mapped to numpad key: {key_name}")
+        
+        updated_keys_count = 0
+        hidden_keys_count = 0
+        
+        for category, buttons in self.key_buttons.items():
+            for key_name, button in buttons.items():
+                bound_actions = self.ed_keys.get_bound_actions(key_name)
+                
+                if current_tab == "All":
+                    relevant_actions = bound_actions
+                elif current_tab == "General":
+                    relevant_actions = [action for action in bound_actions if action in BINDING_CATEGORIES["General"]]
                 else:
-                    logging.debug("Numpad key not found in mapping.")
-            else:
-                # For other keys, use the KEY_MAPPING
-                key_name = KEY_MAPPING.get(key, "")
-                if not key_name:
-                    # If not found in KEY_MAPPING, try to get it from the event's text
-                    key_name = text.upper()
-                    if key_name:
-                        logging.debug(f"Mapped using text: {key_name}")
-                    else:
-                        logging.debug("Key name could not be determined.")
+                    relevant_actions = [action for action in bound_actions if action in BINDING_CATEGORIES.get(current_tab, [])]
+                    if self.show_general_keys:
+                        relevant_actions += [action for action in bound_actions if action in BINDING_CATEGORIES["General"]]
+        
+                primary_category = self.determine_primary_category(relevant_actions, current_tab)
+                
+                style = self.get_button_style(primary_category, relevant_actions, current_tab, is_pressed=(key_name in self.active_keys))
+                button.setStyleSheet(style)
+                button.setProperty("primary_category", primary_category)
+                button.setProperty("bound_actions", bound_actions)
+                button.setProperty("relevant_actions", relevant_actions)
+                
+                tooltip = self.create_tooltip(relevant_actions, current_tab)
+                button.setToolTip(tooltip)
+                
+                if category == current_tab or category == "All" or (self.show_general_keys and primary_category == "General"):
+                    button.show()
+                    updated_keys_count += 1
+                else:
+                    button.hide()
+                    hidden_keys_count += 1
+                
+                button.update()
 
-        logging.debug(f"Final Mapped Key Name: {key_name}")  # Detailed log
-
-        return key_name
-
-    def display_bindings(
-        self, key_name
-    ):  # Displays the actions bound to a specific key in the bindings text area.
-        """
-        Displays the actions bound to a specific key in the bindings text area.
-
-        :param key_name: Key name to display bindings for.
-        """
-        if not self.bindings_text.isVisible():
-            return
-        if key_name in self.key_buttons:
-            button = self.key_buttons[key_name]
-            all_bound_actions = button.property("all_bound_actions")
-            current_category = self.tab_widget.tabText(self.tab_widget.currentIndex())
-
-            self.bindings_text.clear()
-            self.bindings_text.append(f"<h2>Key: {key_name}</h2>")
-
-            if all_bound_actions:
-                categorized_actions = self.categorize_actions(all_bound_actions)
-
-                category_order = [current_category, "General"] + [
-                    cat
-                    for cat in BINDING_CATEGORIES.keys()
-                    if cat not in [current_category, "General"]
-                ]
-
-                for category in category_order:
-                    if category in categorized_actions:
-                        self.display_category(category, categorized_actions[category])
-            else:
-                self.bindings_text.append("No bindings found")
-
-    def should_block_key(self, key):
-        blocked_keys = [
-            Qt.Key_Tab,
-            Qt.Key_Backtab,
-            Qt.Key_Left,
-            Qt.Key_Right,
-            Qt.Key_Up,
-            Qt.Key_Down,
-            Qt.Key_PageUp,
-            Qt.Key_PageDown,
-            Qt.Key_Home,
-            Qt.Key_End,
-            Qt.Key_Return,
-            Qt.Key_Enter,
-            Qt.Key_Space,
-        ]
-        return key in blocked_keys
-
-    ###  Using keyboard to log keypresses to show on keyboard, even while in game - technically DEBUG, allows you to see the keypresses in the GUI no matter where you are.
-
-    def on_key_press(self, key):
-        if not self.globalKeyLoggingAction.isChecked():
-            return
-
-        try:
-            key_char = key.char.upper()
-        except AttributeError:
-            key_char = str(key).split(".")[-1].upper()
-
-        if key_char in VK_CODE and key_char not in self.held_keys:
-            self.held_keys.add(key_char)
-            logging.debug(f"Global key pressed: {key_char}")
-            self.update_key_visual(key_char, True)
-
-    def on_key_release(self, key):
-        if not self.globalKeyLoggingAction.isChecked():
-            return
-
-        try:
-            key_char = key.char.upper()
-        except AttributeError:
-            key_char = str(key).split(".")[-1].upper()
-
-        if key_char in VK_CODE and key_char in self.held_keys:
-            self.held_keys.remove(key_char)
-            logging.debug(f"Global key released: {key_char}")
-            self.update_key_visual(key_char, False)
-
-    def toggle_global_key_logging(self, state):
-        if state:
-            # Enable global key logging
-            self.listener = keyboard.Listener(
-                on_press=self.on_key_press, on_release=self.on_key_release
-            )
-            self.listener.start()
-            logging.info("Global key logging enabled")
-        else:
-            # Disable global key logging
-            if hasattr(self, "listener"):
-                self.listener.stop()
-                del self.listener
-            logging.info("Global key logging disabled")
-
-    ### GUI tab colours
-
-    def get_group_color(self, tab_index):
-        """
-        Retrieves the color associated with the group's tab.
-
-        :param tab_index: The index of the selected tab.
-        :return: Hex color string.
-        """
-        group_name = self.tab_widget.tabText(tab_index)
-        # Assuming group_name corresponds to a color key, e.g., "Ship" -> "key_ship"
-        color_key = f"key_{group_name.lower()}"
-        return THEMES[CURRENT_THEME].get(color_key, THEMES[CURRENT_THEME]["key_bound"])
-
+        self.logger.info(f"Updated all keys for tab '{current_tab}'. Show General Keys: {self.show_general_keys}")
+        self.logger.debug(f"Tab: '{current_tab}'. {updated_keys_count} keys updated, {hidden_keys_count} keys hidden.")
+     
     def on_tab_changed(self, index):
         """
-        Slot triggered when the current tab changes.
-
-        :param index: The new tab index.
+        Handles the event when the user switches tabs.
+        
+        :param index: The index of the newly selected tab
         """
+        self.update_all_keys()
         self.apply_selected_tab_style(index)
+        
+        current_tab = self.tab_widget.tabText(index)
+        updates = []
+        
+        for key_name, button in self.key_buttons.get(current_tab, {}).items():
+            is_pressed = key_name in self.active_keys
+            if self.update_button_state(button, is_pressed):
+                updates.append(f"{key_name}: {'pressed' if is_pressed else 'normal'}")
+        
+        # if updates:
+        #     self.debug_log(
+        #         category='Tab Change',
+        #         message=f"Tab changed to {current_tab}. Updated keys: {', '.join(updates)}",
+        #         level='DEBUG'
+        #     )
+        # else:
+        #     self.debug_log(
+        #         category='Tab Change',
+        #         message=f"Tab changed to {current_tab}. No key updates needed.",
+        #         level='DEBUG'
+        #     )
 
-    def apply_selected_tab_style(self, index):
+    def apply_selected_tab_style(self, index): # Applies the appropriate style to the selected tab.
         """
-        Updates the stylesheet to reflect the selected tab's group color.
-
-        :param index: The index of the selected tab.
+        Applies the appropriate style to the selected tab.
+        
+        :param index: The index of the selected tab
         """
         group_color = self.get_group_color(index)
-        text_color = THEMES[CURRENT_THEME]["text"]
+        text_color = THEMES[CURRENT_THEME]['text']
 
-        # Define the QTabBar::tab:selected stylesheet with the group color
         selected_tab_stylesheet = f"""
         QTabBar::tab:selected {{
             background-color: {group_color};
@@ -2081,20 +2016,535 @@ class KeyboardGUI(QMainWindow):
         }}
         """
 
-        # Combine the base stylesheet with the selected_tab_stylesheet
         full_stylesheet = self.base_stylesheet + selected_tab_stylesheet
-
-        # Apply the combined stylesheet to the QTabWidget
         self.tab_widget.setStyleSheet(full_stylesheet)
 
+    def get_group_color(self, tab_index): # Retrieves the color associated with the group's tab.
+        """
+        Retrieves the color associated with the group's tab.
+        
+        :param tab_index: The index of the selected tab
+        :return: Hex color string for the group
+        """
+        group_name = self.tab_widget.tabText(tab_index)
+        color_key = f"key_{group_name.lower()}"
+        return THEMES[CURRENT_THEME].get(color_key, THEMES[CURRENT_THEME]["key_bound"])
+
+    def determine_primary_category(self, actions, tab_category):
+        if not actions:
+            return "Normal"  # Unbound keys
+        
+        categories = set()
+        for action in actions:
+            for category, cat_actions in BINDING_CATEGORIES.items():
+                if action in cat_actions:
+                    categories.add(category)
+                    break
+        
+        if not categories:
+            return "General"
+        elif len(categories) == 1:
+            return categories.pop()
+        elif tab_category in categories:
+            return tab_category
+        else:
+            # Prioritize non-General categories
+            non_general = categories - {"General"}
+            return next(iter(non_general)) if non_general else "General"
+    
+    def get_binding_category(self, binding): # Determines the category of a specific binding.
+        """
+        Determines the category of a specific binding.
+        
+        :param binding: The binding action to categorize
+        :return: The category of the binding
+        """
+        for category, actions in BINDING_CATEGORIES.items():
+            if binding in actions:
+                return category
+        return "General"
+
+    def get_relevant_actions(self, actions, tab_category): # Filters actions to only those relevant for the current tab category.
+        """
+        Filters actions to only those relevant for the current tab category.
+        
+        :param actions: List of all actions bound to a key
+        :param tab_category: The category of the current tab
+        :return: List of actions relevant to the current tab
+        """
+        if tab_category == "All":
+            return actions
+        return [action for action in actions if self.get_binding_category(action) in [tab_category, "General"]]
+
+    def on_button_press(self, button, key_name):
+        """
+        Handles the visual update when a key button is pressed.
+        
+        :param button: The QPushButton representing the key
+        :param key_name: The name of the key
+        """
+
+        # For other keys, apply pressed style
+        style = self.get_button_style(
+            button.property("primary_category"),
+            button.property("relevant_actions"),
+            self.tab_widget.tabText(self.tab_widget.currentIndex()),
+            is_pressed=True
+        )
+        button.setStyleSheet(style)
+        self.active_keys.add(key_name)
+        self.debug_log(
+            category='Button Press',
+            message=f"Key '{key_name}' pressed.",
+            level='DEBUG'
+        )
+
+    def on_button_release(self, button, key_name):
+        """
+        Handles the visual update when a key button is released.
+        
+        :param button: The QPushButton representing the key
+        :param key_name: The name of the key
+        """
+        
+        # For other keys, revert to normal style
+        style = self.get_button_style(
+            button.property("primary_category"),
+            button.property("relevant_actions"),
+            self.tab_widget.tabText(self.tab_widget.currentIndex()),
+            is_pressed=False
+        )
+        button.setStyleSheet(style)
+        self.active_keys.discard(key_name)
+        self.debug_log(
+            category='Button Release',
+            message=f"Key '{key_name}' released.",
+            level='DEBUG'
+        )
+
+
+
+    # NUM LOCK handling
+    
+    def update_num_lock_status(self):
+        """
+        Checks the current state of NUM LOCK and updates the status bar accordingly.
+        """
+        numlock_on = is_numlock_on()
+        self.update_status_bar_numlock(numlock_on)
+    
+    def update_num_lock_button(self, is_on):
+        """
+        Updates the visual state of the NUM LOCK key button based on its current state.
+
+        :param is_on: Boolean indicating if NUM LOCK is active
+        """
+        key_name = "Key_NumLock"
+        current_tab = self.tab_widget.tabText(self.tab_widget.currentIndex())
+        categories_to_check = ["All", current_tab]
+
+        for category in categories_to_check:
+            if category in self.key_buttons and key_name in self.key_buttons[category]:
+                button = self.key_buttons[category][key_name]
+                # Update the style to reflect the NUM LOCK state
+                style = self.get_button_style(
+                    "General",
+                    self.ed_keys.get_bound_actions(key_name),
+                    current_tab,
+                    is_pressed=is_on
+                )
+                button.setStyleSheet(style)
+                button.update()
+                break  # NUM LOCK key found and updated
+            
+    def update_status_bar_numlock(self, is_on):
+        """
+        Updates the status bar to display the current state of NUM LOCK.
+
+        :param is_on: Boolean indicating if NUM LOCK is active
+        """
+        status = "ON" if is_on else "OFF"
+        self.status_bar.showMessage(f"NUM LOCK: {status}", 10000)  # Message disappears after 10 seconds
+
+
+    # TAB handling
+    
+    def focusNextPrevChild(self, next):
+        # Disable focus traversal
+        return False
+
+
+    # Other misc.
+    
+    def load_bindings(self): # Loads key bindings from the binds file.
+        """
+        Loads key bindings from the binds file.
+        """
+        file_path, _ = QFileDialog.getOpenFileName(self, "Load Keybind File", "", "Bind Files (*.binds)")
+        if file_path:
+            try:
+                self.ed_keys.binds_file = file_path
+                self.ed_keys.bindings = self.ed_keys.parse_binds_file()
+                self.update_all_keys()
+                self.status_bar.showMessage(f"Bindings loaded from {file_path}", 5000)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to load bindings: {str(e)}")
+
+    def save_bindings(self): # Saves current key bindings to a file.
+        """
+        Saves current key bindings to a file.
+        """
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Keybind File", "", "Bind Files (*.binds)")
+        if file_path:
+            try:
+                # Assuming ed_keys has a method to save bindings
+                self.ed_keys.save_bindings_to_file(file_path)
+                self.status_bar.showMessage(f"Bindings saved to {file_path}", 5000)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to save bindings: {str(e)}")
+
+    def show_unbound_actions(self): # Displays a dialog showing all unbound actions.
+        """
+        Displays a dialog showing all unbound actions.
+        """
+        unbound_actions = self.get_unbound_actions()
+        if not unbound_actions:
+            QMessageBox.information(self, "Unbound Actions", "All actions are currently bound to keys.")
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Unbound Actions")
+        layout = QVBoxLayout(dialog)
+
+        for category, actions in unbound_actions.items():
+            if actions:
+                group_box = QGroupBox(category)
+                group_layout = QVBoxLayout()
+                for action in actions:
+                    group_layout.addWidget(QLabel(action))
+                group_box.setLayout(group_layout)
+                layout.addWidget(group_box)
+
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(dialog.accept)
+        layout.addWidget(close_button)
+
+        dialog.exec_()
+
+    def get_unbound_actions(self): # Retrieves a list of all actions that are not bound to any key.
+        """
+        Retrieves a list of all actions that are not bound to any key.
+        """
+        unbound = {}
+        all_bound_actions = set()
+        for actions in self.ed_keys.bindings.values():
+            all_bound_actions.update(actions)
+
+        for category, actions in BINDING_CATEGORIES.items():
+            unbound_actions = [action for action in actions if action not in all_bound_actions]
+            if unbound_actions:
+                unbound[category] = unbound_actions
+
+        return unbound
+
+    def assign_key(self, key_name): # Opens a dialog to assign or unbind actions for a specific key
+        """
+        Opens a dialog to assign or unbind actions for a specific key.
+        """
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Assign Key: {key_name}")
+        layout = QVBoxLayout(dialog)
+
+        current_bindings = self.ed_keys.get_bound_actions(key_name)
+        all_actions = [action for category in BINDING_CATEGORIES.values() for action in category]
+
+        action_list = QListWidget()
+        for action in all_actions:
+            item = QListWidgetItem(action)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked if action in current_bindings else Qt.Unchecked)
+            action_list.addItem(item)
+
+        layout.addWidget(action_list)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        layout.addWidget(button_box)
+
+        if dialog.exec_() == QDialog.Accepted:
+            new_bindings = []
+            for i in range(action_list.count()):
+                item = action_list.item(i)
+                if item.checkState() == Qt.Checked:
+                    new_bindings.append(item.text())
+            
+            self.ed_keys.bindings[key_name] = new_bindings
+            self.update_all_keys()
+
+    def reset_active_keys(self): # Resets the state of all active keys.
+        """
+        Resets the state of all active keys.
+        """
+        self.active_keys.clear()
+        self.update_all_key_visuals()
+        self.status_bar.showMessage("Active keys reset", 3000)
+
+    def toggle_global_key_logging(self, state): # Toggles global key logging on or off.
+        """
+        Toggles global key logging on or off. Enabling it allows the application to log *all* your keypresses. Useful for debugging, but be careful to not write anything that could be compromising. :)
+        """
+        if state:
+            self.start_global_key_logging()
+        else:
+            self.stop_global_key_logging()
+
+    def start_global_key_logging(self): # Starts global key logging.
+        """
+        Starts global key logging.
+        """
+        self.key_logger = keyboard.Listener(on_press=self.on_key_press, on_release=self.on_key_release)
+        self.key_logger.start()
+        self.status_bar.showMessage("Global key logging started", 3000)
+
+    def stop_global_key_logging(self): # Stops global key logging.
+        """
+        Stops global key logging.
+        """
+        if hasattr(self, 'key_logger'):
+            self.key_logger.stop()
+            self.status_bar.showMessage("Global key logging stopped", 3000)
+
+    def on_key_press(self, key): # Handles global key press events when logging is enabled.
+        """
+        Handles global key press events when logging is enabled.
+        """
+        try:
+            key_char = key.char
+        except AttributeError:
+            key_char = str(key)
+        logging.info(f"Key pressed: {key_char}")
+
+    def on_key_release(self, key): # Handles global key release events when logging is enabled.
+        """
+        Handles global key release events when logging is enabled.
+        """
+        try:
+            key_char = key.char
+        except AttributeError:
+            key_char = str(key)
+        logging.info(f"Key released: {key_char}")
+
+    def update_status_bar(self):
+        if self.is_key_dialog_open:
+            status = "Keys Unblocked (Dialog Open)"
+            color = "green"
+        else:
+            status = "Keys Blocked (Main Interface)"
+            color = "red"
+        self.key_block_status_label.setText(f"<font color='{color}'>{status}</font>")
+        self.logger.debug(f"Status bar updated: {status}")
+
+    def closeEvent(self, event):
+        # Remove our custom handler before the application closes
+        for handler in self.logger.handlers[:]:
+            if isinstance(handler, QTextEditLogger):
+                self.logger.removeHandler(handler)
+                handler.close()
+        super().closeEvent(event)
+
+
+    ### Debugging
+    
+    def verify_key_mappings(self):
+        logging.info("Verifying key mappings...")
+        all_layout_keys = set()
+        for layout in LAYOUTS["QWERTY"].values():
+            for row in layout:
+                for key_data in row:
+                    if isinstance(key_data, (tuple, list)) and len(key_data) >= 1:
+                        all_layout_keys.add(key_data[0])
+
+        mapped_keys = set(KEY_MAPPING.values())
+        unmapped_layout_keys = all_layout_keys - mapped_keys
+        unmapped_dict_keys = mapped_keys - all_layout_keys
+
+        if unmapped_layout_keys:
+            logging.warning(f"Layout keys not in KEY_MAPPING: {unmapped_layout_keys}")
+        if unmapped_dict_keys:
+            logging.warning(f"KEY_MAPPING keys not in layout: {unmapped_dict_keys}")
+
+        # Check if all keys in the layout have corresponding buttons
+        for category, keys in self.key_buttons.items():
+            for key_name in all_layout_keys:
+                if key_name not in keys:
+                    logging.warning(f"No button created for key: {key_name} in category: {category}")
+
+        logging.info("Key mapping verification complete.")
+    
+    def verify_color_assignments(self):
+        """
+        Verifies that each category has a corresponding color assigned in the THEMES dictionary.
+        Logs the result of the verification.
+        """
+        all_categories = set(BINDING_CATEGORIES.keys())
+        all_categories.add("General")  # Include General if it's handled separately
+
+        missing_colors = []
+        duplicate_colors = {}
+        color_assignments = {}
+
+        for category in all_categories:
+            color_key = f"key_{category.lower()}"
+            color = THEMES.get(CURRENT_THEME, {}).get(color_key)
+            if not color:
+                missing_colors.append(color_key)
+                self.debug_log(
+                    category='Color Verification',
+                    message=f"Missing color for category '{category}' with key '{color_key}'.",
+                    level='WARNING'
+                )
+            else:
+                if color in color_assignments:
+                    # Duplicate color found
+                    if color not in duplicate_colors:
+                        duplicate_colors[color] = [color_assignments[color]]
+                    duplicate_colors[color].append(category)
+                else:
+                    color_assignments[color] = category
+
+        if not missing_colors and not duplicate_colors:
+            self.debug_log(
+                category='Color Verification',
+                message="All categories have unique and assigned colors.",
+                level='INFO'
+            )
+        else:
+            if missing_colors:
+                self.debug_log(
+                    category='Color Verification',
+                    message=f"Missing colors for categories: {', '.join(missing_colors)}.",
+                    level='ERROR'
+                )
+            if duplicate_colors:
+                duplicates = "; ".join([f"Color '{color}' assigned to categories: {', '.join(cats)}" for color, cats in duplicate_colors.items()])
+                self.debug_log(
+                    category='Color Verification',
+                    message=f"Duplicate color assignments found: {duplicates}.",
+                    level='ERROR'
+                )
+
+    def verify_buttons(self):
+        expected_keys = [
+            "Key_NumLock", 
+            # "Key_A", "Key_S", "Key_D", "Key_W", "Key_E",
+            # "Key_R", "Key_F", "Key_G", "Key_Z", "Key_X", "Key_C",
+            # Add more keys as needed to test
+        ]
+        
+        for key in expected_keys:
+            found = False
+            for category, buttons in self.key_buttons.items():
+                if key in buttons:
+                    found = True
+                    button = buttons[key]
+                    if not button.isVisible():
+                        self.debug_log(
+                            category='Button Verification',
+                            message=f"Button '{key}' exists in category '{category}' but is not visible.",
+                            level='WARNING'
+                        )
+                    else:
+                        self.debug_log(
+                            category='Button Verification',
+                            message=f"Button '{key}' exists and is visible in category '{category}'.",
+                            level='DEBUG'
+                        )
+                        
+                        # Additional check for NUM LOCK styling
+                        if key == "Key_NumLock":
+                            style = button.styleSheet()
+                            self.debug_log(
+                                category='Button Verification',
+                                message=f"NUM LOCK button style: {style}",
+                                level='DEBUG'
+                            )
+                    break
+            if not found:
+                self.debug_log(
+                    category='Button Verification',
+                    message=f"Button '{key}' not found in any category.",
+                    level='ERROR'
+                )
+
+    def track_pressed_keys(self, key_name, is_pressed):
+        if is_pressed:
+            self.active_keys.add(key_name)
+        else:
+            self.active_keys.discard(key_name)
+        
+        self.logger.debug(f"Active keys updated. Currently pressed: {self.active_keys}")
+
+    def debug_log(self, category, message, level='DEBUG', **kwargs):
+        """
+        A custom logging wrapper.
+        
+        :param category: The category of the log message
+        :param message: The main log message
+        :param level: The severity level of the log ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
+        :param kwargs: Additional key-value pairs to include in the log
+        """
+        level = level.upper()
+        log_message = f"{category}: {message}"
+        if kwargs:
+            log_message += " - " + ", ".join(f"{k}: {v}" for k, v in kwargs.items())
+
+        if level == 'DEBUG':
+            self.logger.debug(log_message)
+        elif level == 'INFO':
+            self.logger.info(log_message)
+        elif level == 'WARNING':
+            self.logger.warning(log_message)
+        elif level == 'ERROR':
+            self.logger.error(log_message)
+        elif level == 'CRITICAL':
+            self.logger.critical(log_message)
+        else:
+            self.logger.error(f"Invalid log level: {level}")
+
+    def run_verifications(self):
+        self.verify_color_assignments()
+        self.verify_buttons()
+            
+            
+class ButtonEventFilter(QObject):
+    def __init__(self, button, logger):
+        super().__init__()
+        self.button = button
+        self.logger = logger  # Use the configured 'EDKeysGUI' logger
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.KeyPress:
+            self.logger.debug(f"Button {self.button.text()} filtered key press: {event.key()}")
+            
+            if event.key() == Qt.Key_Tab:
+                # Do not block Tab key, let it propagate
+                return False
+
+            # Handle other keys as needed
+            self.button.animateClick()
+            self.logger.debug(f"Button {self.button.text()} clicked programmatically.")
+            return True  # Block other key events after handling
+        return super().eventFilter(obj, event)
 
 class PluginManager:
     """
     Manages the loading and unloading of plugins.
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent, logger):
         self.parent = parent
+        self.logger = logger  # Use the configured 'EDKeysGUI' logger
         self.plugins = {}  # key: plugin name, value: plugin instance
         self.plugin_paths = {}  # key: plugin name, value: plugin file path
 
@@ -2109,6 +2559,7 @@ class PluginManager:
                 "Plugin Load Error",
                 f"Plugin '{plugin_name}' is already loaded.",
             )
+            self.logger.warning(f"Attempted to load already loaded plugin '{plugin_name}'.")
             return
 
         spec = importlib.util.spec_from_file_location(plugin_name, plugin_path)
@@ -2118,7 +2569,7 @@ class PluginManager:
                 spec.loader.exec_module(module)
                 plugin_class = getattr(module, "Plugin", None)
                 if plugin_class and issubclass(plugin_class, PluginInterface):
-                    plugin_instance = plugin_class(self.parent)
+                    plugin_instance = plugin_class(self.parent, self.logger)
                     plugin_instance.load()
                     self.plugins[plugin_name] = plugin_instance
                     self.plugin_paths[plugin_name] = plugin_path
@@ -2127,14 +2578,16 @@ class PluginManager:
                         "Plugin Loaded",
                         f"Plugin '{plugin_name}' loaded successfully.",
                     )
+                    self.logger.info(f"Plugin '{plugin_name}' loaded successfully.")
                 else:
                     QMessageBox.warning(
                         self.parent,
                         "Plugin Load Error",
                         f"Plugin '{plugin_name}' does not have a valid 'Plugin' class.",
                     )
+                    self.logger.error(f"Plugin '{plugin_name}' does not have a valid 'Plugin' class.")
             except Exception as e:
-                logging.error(f"Error loading plugin '{plugin_name}': {e}")
+                self.logger.error(f"Error loading plugin '{plugin_name}': {e}")
                 QMessageBox.critical(
                     self.parent,
                     "Plugin Load Error",
@@ -2146,6 +2599,7 @@ class PluginManager:
                 "Plugin Load Error",
                 f"Could not load plugin from '{plugin_path}'.",
             )
+            self.logger.error(f"Could not load plugin from '{plugin_path}'.")
 
     def unload_plugin(self, plugin_name):
         """
@@ -2157,6 +2611,7 @@ class PluginManager:
                 "Plugin Unload Error",
                 f"Plugin '{plugin_name}' is not loaded.",
             )
+            self.logger.warning(f"Attempted to unload non-loaded plugin '{plugin_name}'.")
             return
 
         try:
@@ -2168,8 +2623,9 @@ class PluginManager:
                 "Plugin Unloaded",
                 f"Plugin '{plugin_name}' unloaded successfully.",
             )
+            self.logger.info(f"Plugin '{plugin_name}' unloaded successfully.")
         except Exception as e:
-            logging.error(f"Error unloading plugin '{plugin_name}': {e}")
+            self.logger.error(f"Error unloading plugin '{plugin_name}': {e}")
             QMessageBox.critical(
                 self.parent,
                 "Plugin Unload Error",
@@ -2199,6 +2655,7 @@ class PluginManager:
                         "Toggle Plugin Error",
                         f"Plugin path for '{plugin_name}' not found.",
                     )
+                    self.logger.warning(f"Plugin path for '{plugin_name}' not found.")
 
     def list_plugins(self):
         """
@@ -2208,6 +2665,7 @@ class PluginManager:
         plugins_dir = os.path.join(os.getcwd(), "plugins")
         if not os.path.isdir(plugins_dir):
             os.makedirs(plugins_dir)
+            self.logger.info(f"Created plugins directory at '{plugins_dir}'.")
 
         plugin_files = [f for f in os.listdir(plugins_dir) if f.endswith(".py")]
         all_plugins = set(os.path.splitext(f)[0] for f in plugin_files)
@@ -2215,16 +2673,17 @@ class PluginManager:
         for plugin in all_plugins:
             status = "Loaded" if plugin in self.plugins else "Not Loaded"
             plugin_list.append((plugin, status))
-        return plugin_list
-
+        self.logger.debug(f"Listed plugins: {plugin_list}")
+        return plugin_list    
 
 class PluginInterface:
     """
     A base class for all plugins. Plugins should inherit from this class and implement the load and unload methods.
     """
 
-    def __init__(self, main_window):
+    def __init__(self, main_window, logger):
         self.main_window = main_window
+        self.logger = logger  # Use the configured 'EDKeysGUI' logger
 
     def load(self):
         """
@@ -2241,10 +2700,19 @@ class PluginInterface:
         raise NotImplementedError("Plugin must implement the unload method.")
 
 
+
 def main():
     """Run the application."""
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+
+    # Create the main window and QTextEdit for logging
+    main_window = QMainWindow()
+    log_text_edit = QTextEdit(main_window)
+    log_text_edit.setReadOnly(True)
+
+    # Setup logging and get the configured logger
+    logger = setup_logging(log_text_edit)
 
     # Define base stylesheet without QTabBar::tab:selected
     base_stylesheet = f"""
@@ -2276,13 +2744,24 @@ def main():
     """
 
     binds_file = "main.binds"
-    ed_keys = EDKeys(binds_file)
+    logger.debug(f"Loading bindings from '{binds_file}'.")
+    ed_keys = EDKeys(binds_file, logger)
+    logger.debug("Bindings loaded successfully.")
 
-    # Pass the base_stylesheet to KeyboardGUI
-    ex = KeyboardGUI(ed_keys, base_stylesheet)
+    # Initialize GUI and pass the logger
+    ex = KeyboardGUI(ed_keys, base_stylesheet, logger)
     ex.show()
+    logger.info("KeyboardGUI initialized and displayed.")
+
+    # Example log messages (for testing purposes)
+    # logger.debug("This is a DEBUG message.")
+    # logger.info("This is an INFO message.")
+    # logger.warning("This is a WARNING message.")
+    # logger.error("This is an ERROR message.")
+    # logger.critical("This is a CRITICAL message.")
 
     sys.exit(app.exec_())
+
 
 
 if __name__ == "__main__":
