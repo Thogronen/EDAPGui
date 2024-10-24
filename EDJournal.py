@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 from os import environ, listdir
 from os.path import join, isfile, getmtime, abspath
 from json import loads
 from time import sleep, time
 from datetime import datetime
 
+from EDAP_data import ship_size_map
 from EDlogger import logger
 from WindowsKnownPaths import *
 
@@ -36,6 +39,32 @@ TODO: thinking self.ship()[name]  uses the same names as in the journal, so can 
 """
 
 
+def get_ship_size(ship: str) -> str:
+    """ Gets the ship size from the journal ship name.
+        @ship:  The ship name from the journal (i.e. 'diamondbackxl').
+        @return: The ship size ('S', 'M', 'L' or '' if ship not found or size not valid).
+    """
+    if ship in ship_size_map:
+        return ship_size_map[ship]
+    else:
+        return ''
+
+
+def check_fuel_scoop(modules: list[dict[str, any]] | None) -> bool:
+    """ Gets whether the ship has a fuel scoop.
+    """
+    # Default to fuel scoop fitted if modules is None
+    if modules is None:
+        return True
+
+    # Check all modules. Could just check the internals, but this is easier.
+    for module in modules:
+        if "FUELSCOOP" in module['Item'].upper():
+            return True
+
+    return False
+
+
 class EDJournal:
     def __init__(self):
         self.log_file = None
@@ -64,6 +93,9 @@ class EDJournal:
             'fuel_level': None,
             'fuel_percent': None,
             'is_scooping': False,
+            'cargo_capacity': None,
+            'ship_size': None,
+            'has_fuel_scoop': None,
         }
         self.ship_state()    # load up from file
         self.reset_items()
@@ -177,8 +209,18 @@ class EDJournal:
                 self.ship['interdicted'] = True
 
             # parse ship type
-            if log_event == 'LoadGame' or log_event == 'Loadout':
+            if log_event == 'LoadGame':
                 self.ship['type'] = log['Ship']
+                self.ship['ship_size'] = get_ship_size(log['Ship'])
+
+            # Parse Loadout
+            # When written: at startup, when loading from main menu, or when switching ships,
+            # or after changing the ship in Outfitting, or when docking SRV back in mothership
+            if log_event == 'Loadout':
+                self.ship['type'] = log['Ship']
+                self.ship['ship_size'] = get_ship_size(log['Ship'])
+                self.ship['cargo_capacity'] = log['CargoCapacity']
+                self.ship['has_fuel_scoop'] = check_fuel_scoop(log['Modules'])
 
             # parse fuel
             if 'FuelLevel' in log and self.ship['type'] != 'TestBuggy':

@@ -64,7 +64,7 @@ class EDWayPoint:
             with open(fileName,"r") as fp:
                 s = json.load(fp)
         except  Exception as e:
-            logger.warning("EDWayPoint.py read_config error :"+str(e))
+            logger.warning("EDWayPoint.py read_waypoints error :" + str(e))
 
         return s    
        
@@ -76,9 +76,8 @@ class EDWayPoint:
             with open(fileName,"w") as fp:
                 json.dump(data,fp, indent=4)
         except Exception as e:
-            logger.warning("EDWayPoint.py write_config error:"+str(e))
- 
- 
+            logger.warning("EDWayPoint.py write_waypoints error:" + str(e))
+
     def mark_waypoint_complete(self, key):
         self.waypoints[key]['Completed'] = True
         self.write_waypoints(data=None, fileName='./waypoints/' + Path(self.filename).name)  
@@ -151,6 +150,7 @@ class EDWayPoint:
             ap.keys.send('UI_Select', hold=4.0)
         else:
             self.mouse.do_click(x, y)
+            self.mouse.do_click(x, y, 1.25)
 
             # for horizons we need to select it
             if self.is_odyssey == False:

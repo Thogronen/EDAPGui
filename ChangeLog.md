@@ -1,4 +1,25 @@
-# 8/31/2024 Updated docs.
+# 10/13/2024 Stumpii: Fixed FuelScoop detection.
+ - Change fuelscoop detection from ModulesInfo.json to the Journal because ModulesInfo.json was not updated by the game enough to be useful.
+
+# 10/6/2024 Stumpii: Various changes:
+ - Added status flags and status parser for processing Status.json file.
+ - Change interdiction check to check Status.json instead of Journal and image matching.
+ - Added interdiction checks when avoiding sun and fuel scooping.
+ - Force module into updates by going to the interior panel before undocking.
+ - Updated screen region to use the correct monitor.
+ - Added code to allow Python 3.9 and maybe earlier to run correctly with a workaround for the changes that use new features.
+ 
+# 9/30/2024 Stumpii: Various changes:
+ - Added ship type and ship size to the journal and ship status.
+ - Added ED_data file for constants.
+ - Added ModulesInfoParser to detect if fuel scoop is installed. The other parsers will be added as needed.
+ - Removed setting speed to 100% when target lost as this happen when target is in front and causes gravity well message.
+ - Removed time delay on SC disengage as it was sometimes too slow and overshooting the station.
+ - Detection of monitor > 1 and identify which monitor ED is on.
+
+# 9/10/2024 Updated docs and minor fixes.
+ - Stumpii: Correction to mouse click.
+ - Stumpii: Add hotkey data entry on GUI for Robigo Assist (Pg Up) which is not shown anywhere.
  - Stumpii: Updated docs.
 
 # 8/20/2024 Added debug options to GUI.

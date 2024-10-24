@@ -1,3 +1,4 @@
+import logging
 import cv2
 import os
 from Screen_Regions import *
@@ -18,6 +19,7 @@ Description:
 def main():
     # Uncomment one tests to be performed as each runs in a loop until exited.
     # Run this file instead of the main EDAPGUI file.
+    logger.setLevel(logging.DEBUG)  # Default to log all debug when running this file.
 
     # Rescale screenshots from the user scaling (i.e. 1920x1080 [0.75,0.75]
     # to the default scaling of 3440x1440 [1.0, 1.0]. Note the scaling is by
@@ -47,10 +49,10 @@ def main():
     # Shows regions on the Elite window...
     # Requires Elite Dangerous to be running.
     # =======================================
-    wanted_regions = ["compass", "target", "nav_panel", "disengage", "interdicted", "fss", "mission_dest", "missions",
+    wanted_regions = ["compass", "target", "nav_panel", "disengage", "fss", "mission_dest", "missions",
                       "sun"]
     wanted_regions = ["compass", "target", "nav_panel", "disengage"]  # The more common regions for navigation
-    regions_test(wanted_regions)
+    # show_regions(wanted_regions)
 
     # HSV Tester...
     #
@@ -152,10 +154,10 @@ def template_matching_test(region_name, template):
             break
 
 
-def regions_test(regions):
+def show_regions(region_names):
     """ Draw a rectangle indicating the given region on the Elite Dangerous window.
-        :param regions: An array names of the regions to indicate on screen (i.e. ["compass", "target"])."""
-    ov = Overlay("", 0)
+        :param region_names: An array names of the regions to indicate on screen (i.e. ["compass", "target"])."""
+    ov = Overlay("", 1)
     scr = Screen()
     templ = Image_Templates(scr.scaleX, scr.scaleY)
     scrReg = Screen_Regions(scr, templ)
@@ -182,7 +184,7 @@ def regions_test(regions):
         #tgt = scrReg.capture_region_filtered(scr, key)
         #print(key)
         #print(scrReg.reg[key])
-        if key in regions:
+        if key in region_names:
             ov.overlay_rect(key, (scrReg.reg[key]['rect'][0], scrReg.reg[key]['rect'][1]),
                             (scrReg.reg[key]['rect'][2], scrReg.reg[key]['rect'][3]),
                             overlay_colors[i+1], 2)
@@ -248,23 +250,23 @@ def hsv_tester(image_path):
 
 
 def rescale_screenshots(directory, scalex, scaley):
-    """ Rescale all images in a folder.
+    """ Rescale all images in a folder. Also convert BMP to PNG
     :param directory: The directory to process.
     :param scalex: The X scaling of the original image.
     :param scaley: The scaling of the original image. """
 
     # Calc factor to scale image up/down
-    newScaleX = 1.0/scalex
-    newScaleY = 1.0/scaley
+    newScaleX = 1.0 / scalex
+    newScaleY = 1.0 / scaley
 
     directory_out = os.path.join(directory, 'out')
     if not os.path.exists(directory_out):
         os.makedirs(directory_out)
 
     for filename in os.listdir(directory):
-        if filename.endswith(".png"):
+        if filename.endswith(".png") or filename.endswith(".bmp"):
             image_path = os.path.join(directory, filename)
-            image_out_path = os.path.join(directory_out, filename)
+            image_out_path = os.path.join(directory_out, filename.replace('bmp', 'png'))
 
             image = cv2.imread(image_path)
 
