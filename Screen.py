@@ -1,6 +1,10 @@
+from __future__ import annotations
+import typing
+import logging
+
 import cv2
-from numpy import array, sum, where
-from PIL import Image, ImageGrab
+import win32gui
+from numpy import array
 import mss
 from pyautogui import size
 import json
@@ -23,13 +27,48 @@ Author: sumzer0@yahoo.com
 #    bbox = win32gui.GetWindowRect(hwnd)     will also then give me the resolution of the image
 #     img = ImageGrab.grab(bbox)
 
+elite_dangerous_window = "Elite - Dangerous (CLIENT)"
+
+
 class Screen:
     def __init__(self):
-        self.screen_width, self.screen_height = size()
+        self.mss = mss.mss()
+
+        # Find ED window position to determine which monitor it is on
+        ed_rect = self.get_elite_window_rect()
+        if ed_rect is None:
+            logger.error(f'Could not find window {elite_dangerous_window}.')
+        else:
+            logger.debug(f'Found Elite Dangerous window position: {ed_rect}')
+
+        # Examine all monitors to determine match with ED
+        self.mons = self.mss.monitors
+        mon_num = 0
+        for item in self.mons:
+            if mon_num > 0:  # ignore monitor 0 as it is the complete desktop (dims of all monitors)
+                logger.debug(f'Found monitor {mon_num} with details: {item}')
+                if ed_rect is None:
+                    self.monitor_number = mon_num
+                    self.mon = self.mss.monitors[self.monitor_number]
+                    logger.debug(f'Defaulting to monitor {mon_num}.')
+                    self.screen_width = item['width']
+                    self.screen_height = item['height']
+                    break
+                else:
+                    if item['left'] == ed_rect[0] and item['top'] == ed_rect[1]:
+                        # Get information of monitor 2
+                        self.monitor_number = mon_num
+                        self.mon = self.mss.monitors[self.monitor_number]
+                        logger.debug(f'Elite Dangerous is on monitor {mon_num}.')
+                        self.screen_width = item['width']
+                        self.screen_height = item['height']
+
+            # Next monitor
+            mon_num = mon_num + 1
 
         # Add new screen resolutions here with tested scale factors
-        # this table will be default, overwriten when loading resolution.json file
-        self.scales = {  #scaleX, scaleY
+        # this table will be default, overwritten when loading resolution.json file
+        self.scales = {  # scaleX, scaleY
             '1024x768':   [0.39, 0.39],  # tested, but not has high match % 
             '1080x1080':  [0.5, 0.5],    # fix, not tested
             '1280x800':   [0.48, 0.48],  # tested
@@ -43,9 +82,7 @@ class Screen:
             '3440x1440':  [1.0, 1.0],    # tested
             'Calibrated': [-1.0, -1.0]
         }
- 
-        self.mss = mss.mss()
-        
+
         # used this to write the self.scales table to the json file
         # self.write_config(self.scales)
         
@@ -55,8 +92,7 @@ class Screen:
         if ss is not None:
             self.scales = ss
             logger.debug("read json:"+str(ss))
-            
-        
+
         # try to find the resolution/scale values in table
         # if not, then take current screen size and divide it out by 3440 x1440
         try:
@@ -65,7 +101,7 @@ class Screen:
             self.scaleY = self.scales[scale_key][1]
         except:            
             # if we don't have a definition for the resolution then use calculation
-            self.scaleX = self.screen_width  / 3440.0
+            self.scaleX = self.screen_width / 3440.0
             self.scaleY = self.screen_height / 1440.0
             
         # if the calibration scale values are not -1, then use those regardless of above
@@ -77,6 +113,17 @@ class Screen:
         logger.debug('screen size: '+str(self.screen_width)+" "+str(self.screen_height))
         logger.debug('Scale X, Y: '+str(self.scaleX)+", "+str(self.scaleY))
 
+    @staticmethod
+    def get_elite_window_rect() -> typing.Tuple[int, int, int, int] | None:
+        """ Gets the ED window rectangle.
+        Returns (left, top, right, bottom) or None.
+        """
+        hwnd = win32gui.FindWindow(None, elite_dangerous_window)
+        if hwnd:
+            rect = win32gui.GetWindowRect(hwnd)
+            return rect
+        else:
+            return None
 
     def write_config(self, data, fileName='./configs/resolution.json'):
         if data is None:
@@ -100,13 +147,18 @@ class Screen:
 
     # reg defines a box as a percentage of screen width and height
     def get_screen_region(self, reg):      
-        image = array(self.mss.grab((int(reg[0]), int(reg[1]), 
-                                        int(reg[2]), int(reg[3]) )))
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        image = self.get_screen(int(reg[0]), int(reg[1]), int(reg[2]), int(reg[3]))
         return image
     
     def get_screen(self, x_left, y_top, x_right, y_bot):    #  if absolute need to scale??
-        image = array(self.mss.grab((x_left, y_top, x_right, y_bot)))
+        monitor = {
+            "top": self.mon["top"] + y_top,
+            "left": self.mon["left"] + x_left,
+            "width": x_right - x_left,
+            "height": y_bot - y_top,
+            "mon": self.monitor_number,
+        }
+        image = array(self.mss.grab(monitor))
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         return image
         

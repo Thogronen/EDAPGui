@@ -8,6 +8,7 @@ import cv2
 from PIL import Image
 from pathlib import Path
 
+from EDAP_data import *
 from EDlogger import logger, logging
 import Image_Templates
 import Screen
@@ -17,6 +18,7 @@ from EDJournal import *
 from EDKeys import *
 from EDafk_combat import AFK_Combat
 from Overlay import *
+from StatusParser import StatusParser
 from Voice import *
 from Robigo import *
 
@@ -119,6 +121,7 @@ class EDAutopilot:
         self.afk_combat = AFK_Combat(self.keys, self.jn, self.vce)
         self.waypoint = EDWayPoint(self.jn.ship_state()['odyssey'])
         self.robigo = Robigo(self)
+        self.status = StatusParser()
 
         # rate as ship dependent.   Can be found on the outfitting page for the ship.  However, it looks like supercruise
         # has worse performance for these rates
@@ -460,23 +463,44 @@ class EDAutopilot:
         else:
             return True
 
-    def being_interdicted(self, scr_reg) -> bool:
-        interdict_image, (minVal, maxVal, minLoc, maxLoc), match = scr_reg.match_template_in_region('interdicted', 'interdicted')
-
+    def interdiction_check(self) -> bool:
+        """ Checks if we are being interdicted. This can occur in SC and maybe in system jump by Thargoids
+        (needs to be verified). Returns False if not interdicted, True after interdiction is detected and we
+        get away. Use return result to determine the next action (continue, or do something else).
         """
-        if self.cv_view:
-            #self.draw_match_rect(interdict_image, pt, (pt[0] + width, pt[1] + height), (0,255,0), 2)
-            cv2.putText(interdict_image, f'{maxVal:5.2f} >.40', (1, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
-            cv2.imshow('interdict', interdict_image)
-            cv2.moveWindow('interdict', self.cv_view_x-460,self.cv_view_y+560)
-            cv2.waitKey(1)
-        """
-
-        # need > 50% in the match to say we do have a interdiction
-        if maxVal < 0.40:
+        # Return if we are not being interdicted.
+        if not self.status.get_flag(FlagsBeingInterdicted):
             return False
-        else:
-            return True
+
+        # Interdiction detected.
+        self.vce.say("Danger. Interdiction detected.")
+        self.ap_ckb('log', 'Interdiction detected.')
+
+        # Keep setting speed to zero to submit while in supercruise or system jump.
+        while self.status.get_flag(FlagsSupercruise) or self.status.get_flag2(Flags2FsdHyperdriveCharging):
+            self.keys.send('SetSpeedZero')  # Submit.
+            sleep(0.5)
+
+        # Set speed to 100%.
+        self.keys.send('SetSpeed100')
+
+        # Wait for cooldown to start.
+        self.status.wait_for_flag_on(FlagsFsdCooldown)
+
+        # Boost while waiting for cooldown to complete.
+        while not self.status.wait_for_flag_off(FlagsFsdCooldown, timeout=2):
+            self.keys.send('UseBoostJuice')
+
+        # Cooldown over, get us out of here.
+        self.keys.send('HyperSuperCombination', hold=0.001)
+
+        # Wait for supercruise, keep boosting.
+        while not self.status.wait_for_flag_on(FlagsSupercruise, timeout=2):
+            self.keys.send('UseBoostJuice')
+
+        # Update journal flag.
+        self.jn.ship_state()['interdicted'] = False  # reset flag
+        return True
 
     def get_nav_offset(self, scr_reg):
         """ Determine the x,y offset from center of the compass of the nav point. """
@@ -770,6 +794,13 @@ class EDAutopilot:
         # if sun in front of us, then keep pitching up until it is below us
         while self.is_sun_dead_ahead(scr_reg):
             self.keys.send('PitchUpButton', state=1)
+
+            # check if we are being interdicted
+            interdicted = self.interdiction_check()
+            if interdicted:
+                # Continue journey after interdiction
+                self.keys.send('SetSpeedZero')
+
             # if we are pitching more than N seconds break, may be in high density area star area (close to core)
             if ((time.time()-starttime) > fail_safe_timeout):
                 logger.debug('sun avoid failsafe timeout')
@@ -1120,7 +1151,7 @@ class EDAutopilot:
                     sleep(1)
                 logger.debug('jump= speed 0')
                 self.jump_cnt = self.jump_cnt+1
-                self.keys.send('SetSpeedZero')
+                self.keys.send('SetSpeedZero', repeat=3)  # Let's be triply sure that we set speed to 0% :)
                 sleep(1)  # wait 1 sec after jump to allow graphics to stablize and accept inputs
                 logger.debug('jump=complete')
                 return True
@@ -1151,6 +1182,8 @@ class EDAutopilot:
 
     #
     def refuel(self, scr_reg):
+        # Check if we have a fuel scoop
+        has_fuel_scoop = self.jn.ship_state()['has_fuel_scoop']
 
         logger.debug('refuel')
         scoopable_stars = ['F', 'O', 'G', 'K', 'B', 'A', 'M']
@@ -1166,19 +1199,21 @@ class EDAutopilot:
         # sun types.  Since we won't scoop it doesn't matter how much we pitch up
         # if scoopable we know white/yellow stars are bright, so set higher threshold, this will allow us to 
         #  mast out the galaxy edge (which is bright) and not pitch up too much and avoid scooping
-        if is_star_scoopable == False:
+        if is_star_scoopable == False or not has_fuel_scoop:
             scr_reg.set_sun_threshold(25)
         else:
             scr_reg.set_sun_threshold(self.config['SunBrightThreshold'])
                     
         # Lets avoid the sun, shall we
-        self.vce.say("Sun avoidance")
+        self.vce.say("Avoiding star")
+        self.update_ap_status("Avoiding star")
+        self.ap_ckb('log', 'Avoiding star')
         self.sun_avoid(scr_reg)
-                
 
-        if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and is_star_scoopable:
+        if self.jn.ship_state()['fuel_percent'] < self.config['RefuelThreshold'] and is_star_scoopable and has_fuel_scoop:
             logger.debug('refuel= start refuel')
             self.vce.say("Refueling")
+            self.ap_ckb('log', 'Refueling')
             self.update_ap_status("Refueling")
             
             # mnvr into position
@@ -1194,6 +1229,12 @@ class EDAutopilot:
             #if we don't scoop first 5 tons with 40 sec break, since not scooping or not fast enough or not at all, then abort
             startime = time.time()
             while not self.jn.ship_state()['is_scooping'] and not self.jn.ship_state()['fuel_percent'] == 100:
+                # check if we are being interdicted
+                interdicted = self.interdiction_check()
+                if interdicted:
+                    # Continue journey after interdiction
+                    self.keys.send('SetSpeedZero')
+
                 if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])):
                     self.vce.say("Refueling abort, insufficient scooping")
                     return False
@@ -1203,6 +1244,12 @@ class EDAutopilot:
             # We started fueling, so lets give it another timeout period to fuel up
             startime = time.time()
             while not self.jn.ship_state()['fuel_percent'] == 100:
+                # check if we are being interdicted
+                interdicted = self.interdiction_check()
+                if interdicted:
+                    # Continue journey after interdiction
+                    self.keys.send('SetSpeedZero')
+
                 if ((time.time()-startime) > int(self.config['FuelScoopTimeOut'])):
                     self.vce.say("Refueling abort, insufficient scooping")
                     return True
@@ -1210,16 +1257,24 @@ class EDAutopilot:
                 
             logger.debug('refuel=complete')
             return True
-        
+
         elif is_star_scoopable == False:
+            self.ap_ckb('log', 'Skip refuel - not a fuel star')
             logger.debug('refuel= needed, unsuitable star')
             self.pitchUp(20)
             return False
-        
+
         elif self.jn.ship_state()['fuel_percent'] >= self.config['RefuelThreshold']:
+            self.ap_ckb('log', 'Skip refuel - fuel level okay')
             logger.debug('refuel= not needed')
             return False
-        
+
+        elif not has_fuel_scoop:
+            self.ap_ckb('log', 'Skip refuel - no fuel scoop fitted')
+            logger.debug('No fuel scoop fitted.')
+            self.pitchUp(20)
+            return False
+
         else:
             self.pitchUp(15)  # if not refueling pitch up somemore so we won't heat up
             return False
@@ -1419,14 +1474,13 @@ class EDAutopilot:
         # Loop forever keeping tight align to target, until we get SC Disengage popup
         while True:
             sleep(0.05)
-
             if self.jn.ship_state()['status'] == 'in_supercruise':
 
                 # Align and stay on target. If false is returned, we have lost the target behind us.
                 if self.sc_target_align(scr_reg) == False:
                     # Continue ahead before aligning to prevent us circling the target
-                    self.keys.send('SetSpeed100')
-                    sleep(5)
+                    #self.keys.send('SetSpeed100')
+                    sleep(10)
                     self.keys.send('SetSpeed50')
                     self.nav_align(scr_reg) # Align to target
             else:
@@ -1434,26 +1488,17 @@ class EDAutopilot:
                 align_failed = True
                 break
 
-            # check if we are being interdicted, means we saw it on screen or we already got interdicted
-            if self.being_interdicted(scr_reg) == True or self.jn.ship_state()['interdicted'] == True:
-
-                self.keys.send('SetSpeedZero')  # submit
-                sleep(2)  # wait to come out of interdiction screen
-                self.keys.send('SetSpeed100')
-
-                while self.jn.ship_state()['status'] == 'in_space':
-                    self.keys.send('UseBoostJuice')
-                    self.keys.send('HyperSuperCombination', hold=0.001)
-                    sleep(5)
-
-                self.nav_align(scr_reg)  # realign with station
+            # check if we are being interdicted
+            interdicted = self.interdiction_check()
+            if interdicted:
+                # Continue journey after interdiction
                 self.keys.send('SetSpeed50')
-                self.jn.ship_state()['interdicted'] = False  # reset flag
+                self.nav_align(scr_reg)  # realign with station
 
             # check for SC Disengage
             if (self.sc_disengage(scr_reg) == True):
-                sleep(1)  # wait another sec
-                self.keys.send('HyperSuperCombination', hold=0.001)
+                #sleep(1)  # wait another sec
+                self.keys.send('HyperSuperCombination')#, hold=0.001)
                 break
 
         # if no error, we must have gotten disengage
