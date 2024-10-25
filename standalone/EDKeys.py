@@ -3423,17 +3423,17 @@ class PluginInterface:
 
 class MinimalKeyboardGUI(KeyboardGUI):
     """Minimal version of KeyboardGUI for testing"""
-    
+
     def __init__(self, ed_keys, base_stylesheet, logger, log_handler, log_buffer):
         QMainWindow.__init__(self)
-        
+
         # Initialize necessary attributes from parent class
         self.ed_keys = ed_keys
         self.base_stylesheet = base_stylesheet
         self.logger = logger
         self.log_handler = log_handler
         self.log_buffer = log_buffer
-        
+
         # Initialize required attributes
         self.key_buttons = {}
         self.active_keys = set()
@@ -3442,42 +3442,42 @@ class MinimalKeyboardGUI(KeyboardGUI):
         self.held_keys = set()
         self.highlight_active_keys = False
         self.show_general_keys = True
-        
+
         # Initialize attributes needed for cleanup
         self.key_logger = None
         self.console_log_window = None
         self.global_logging_enabled = False
-        
+
         # Create minimal UI
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
-        
+
         # Add binding toggle button
         self.binding_toggle = QPushButton("Binding Mode: Off")
         self.binding_toggle.setCheckable(True)
         self.binding_toggle.clicked.connect(self.toggle_binding_mode)
         layout.addWidget(self.binding_toggle)
-        
+
         # Initialize styles
         self.precompute_styles()
-        
+
         # Status bar for messages
         self.status_bar = self.statusBar()
-        
+
     # Override methods that would create full UI
     def init_console_log_window(self): pass
     def initUI(self): pass
     def create_tabs(self): pass
     def update_all_keys(self): pass
     def run_verifications(self): pass
-    
+
     def stop_global_key_logging(self):
         """Override to prevent actual key logging operations during tests"""
         if self.key_logger:
             self.key_logger = None
         self.currently_pressed_keys.clear()
-        
+
     def toggle_binding_mode(self):
         """Toggle binding mode and update UI accordingly"""
         self.binding_mode = not self.binding_mode
@@ -3488,7 +3488,7 @@ class MinimalKeyboardGUI(KeyboardGUI):
 
 class TestEDKeys(unittest.TestCase):
     """Test core binding functionality"""
-    
+
     def setUp(self):
         """Create test environment with temporary binds file"""
         self.logger = Mock()
@@ -3524,33 +3524,33 @@ class TestEDKeys(unittest.TestCase):
     def test_bind_action(self):
         """Test binding new actions"""
         self.ed_keys.bind_action("Key_F", "ForwardThrustButton", "Ship")
-        self.assertIn("ForwardThrustButton", 
+        self.assertIn("ForwardThrustButton",
                      self.ed_keys.category_bindings["Ship"]["Key_F"])
 
     def test_unbind_action(self):
         """Test removing bindings"""
         self.ed_keys.bind_action("Key_R", "SelectTarget", "Ship")
         self.ed_keys.unbind_action("SelectTarget", "Ship")
-        self.assertNotIn("SelectTarget", 
+        self.assertNotIn("SelectTarget",
                         self.ed_keys.category_bindings.get("Ship", {}).get("Key_R", []))
 
 class TestKeyboardGUI(unittest.TestCase):
     """Test GUI functionality"""
-    
+
     def setUp(self):
         """Set up test environment"""
         if not QApplication.instance():
             self.app = QApplication([])
         else:
             self.app = QApplication.instance()
-            
+
         self.logger = Mock()
         self.ed_keys = Mock()
         self.ed_keys.get_bound_actions.return_value = []
-        
+
         self.log_buffer = Mock()
         self.log_buffer.flush_records = Mock(return_value=[])
-        
+
         self.gui = MinimalKeyboardGUI(
             self.ed_keys,
             "",
@@ -3594,31 +3594,31 @@ class TestKeyboardGUI(unittest.TestCase):
         self.assertFalse(self.gui.binding_mode)
         self.assertEqual(self.gui.binding_toggle.text(), "Binding Mode: Off")
         self.assertFalse(self.gui.binding_toggle.isChecked())
-        
+
         # Toggle on
         self.gui.toggle_binding_mode()
         self.assertTrue(self.gui.binding_mode, "Binding mode should be on")
         self.assertEqual(self.gui.binding_toggle.text(), "Binding Mode: On", "Button text should indicate On")
         self.assertTrue(self.gui.binding_toggle.isChecked(), "Button should be checked")
-        
+
         # Toggle off
         self.gui.toggle_binding_mode()
         self.assertFalse(self.gui.binding_mode, "Binding mode should be off")
         self.assertEqual(self.gui.binding_toggle.text(), "Binding Mode: Off", "Button text should indicate Off")
         self.assertFalse(self.gui.binding_toggle.isChecked(), "Button should be unchecked")
-        
+
 class TestTooltipAndStyle(unittest.TestCase):
     """Test tooltip generation and button styling"""
-    
+
     def setUp(self):
         self.app = QApplication([])
         self.logger = Mock()
         self.ed_keys = Mock()
         self.ed_keys.get_bound_actions.return_value = []
-        
+
         self.log_buffer = Mock()
         self.log_buffer.flush_records = Mock(return_value=[])
-        
+
         self.gui = MinimalKeyboardGUI(
             self.ed_keys,
             "",
@@ -3651,16 +3651,16 @@ class TestTooltipAndStyle(unittest.TestCase):
         """Test that pressed button style uses darken_color"""
         normal_style = self.gui.get_button_style("Store", ["StoreCamZoomIn"], "Store", False)
         pressed_style = self.gui.get_button_style("Store", ["StoreCamZoomIn"], "Store", True)
-        
+
         def get_bg_color(style):
             for line in style.split('\n'):
                 if 'background-color:' in line and 'pressed' not in line:
                     return line.split(':')[1].strip().rstrip(';')
             return None
-            
+
         normal_color = get_bg_color(normal_style)
         pressed_color = get_bg_color(pressed_style)
-        
+
         self.assertNotEqual(normal_color, pressed_color)
         self.assertEqual(
             pressed_color,
@@ -3670,11 +3670,11 @@ class TestTooltipAndStyle(unittest.TestCase):
     def test_category_handling(self):
         """Test category handling for multiple bindings"""
         actions = ["StoreCamZoomIn", "UIFocus"]
-        
+
         # Test primary category determination
         category = self.gui.determine_primary_category(actions, "Store")
         self.assertEqual(category, "Store")
-        
+
         # Test relevant actions filtering
         store_actions = self.gui.get_relevant_actions(actions, "Store")
         self.assertIn("StoreCamZoomIn", store_actions)
@@ -3801,10 +3801,10 @@ def main():
 
     sys.exit(exit_code)
     
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        print(f"Error starting application: {e}")
-        print("Attempting to run tests instead...")
-        run_tests()
+if __name__ == '__main__':
+    import sys
+    # Check if being run by PyCharm's test runner
+    if any(arg in sys.argv[0] for arg in ['unittest', '_jb_unittest_runner.py']):
+        unittest.main(argv=[''])  # Run tests
+    else:
+        main()  # Run GUI
