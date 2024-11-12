@@ -1,3 +1,27 @@
+# 11/10/2024 Stumpii: Various changes.
+ - Added SupercruiseDestinationDrop to determine if we drop at signal source and cannot request docking.
+ - Only log journal on change, not every request.
+ - Removed logging of statusparser.json file timestamp changes.
+ - Added Elite Window check.
+ - Added option to screen to allow alternate image for testing.
+ - Added a couple of screen functions need for OCR.
+
+# 11/3/2024 Stumpii: Added test buttons for ship calibration.
+ - Added test buttons for ship calibration.
+ - Updated Mandalay.
+
+# 11/2/2024 Stumpii: Added Mandalay.
+ - Added Mandalay.
+
+# 10/28/2024 Stumpii: Minor debug additions.
+ - Minor debug additions.
+
+# 10/22/2024 Stumpii: Minor updates.
+ - Minor updates.
+
+# 10/20/2024 Stumpii: Added logging.
+ - To aid debugging, status bar updates are written to the gui log. Also gui log updates are written to the autopilot log.
+
 # 10/13/2024 Stumpii: Fixed FuelScoop detection.
  - Change fuelscoop detection from ModulesInfo.json to the Journal because ModulesInfo.json was not updated by the game enough to be useful.
 
