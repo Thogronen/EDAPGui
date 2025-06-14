@@ -23,5 +23,3 @@
 .claude
 EDMesg
 *.pyc
-EDAP-Waypoint-Editor/
-configs/ship_configs.json
