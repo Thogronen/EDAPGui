@@ -7,6 +7,7 @@ import mss
 import json
 
 from EDlogger import logger
+from file_utils import read_json_file
 
 
 """
@@ -148,8 +149,7 @@ class Screen:
     def read_config(self, fileName='./configs/resolution.json'):
         s = None
         try:
-            with open(fileName,"r") as fp:
-                s = json.load(fp)
+            s = read_json_file(fileName)
         except  Exception as e:
             logger.warning("Screen.py read_config error :"+str(e))
 
@@ -249,4 +249,17 @@ class Screen:
         # Set the screen size to the original image size, not the region size
         self.screen_width = w
         self.screen_height = h
+
+    def close(self):
+        """Cleanup screen capture resources"""
+        if hasattr(self, 'mss') and self.mss:
+            try:
+                self.mss.close()
+                logger.debug("MSS screenshot context closed")
+            except Exception as e:
+                logger.warning(f"Error closing MSS: {e}")
+
+    def __del__(self):
+        """Cleanup when object is destroyed"""
+        self.close()
 

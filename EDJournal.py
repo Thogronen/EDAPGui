@@ -10,6 +10,7 @@ from datetime import datetime
 from EDAP_data import ship_size_map, ship_name_map
 from EDlogger import logger
 from WindowsKnownPaths import *
+from file_utils import open_text_file
 
 """
 File EDJournal.py  (leveraged the EDAutopilot on github, turned into a 
@@ -198,8 +199,22 @@ class EDJournal:
         logger.info("Opening new Journal: "+log_name)
 
         # open the latest journal
-        self.log_file = open(log_name, encoding="utf-8")
+        self.log_file = open_text_file(log_name)
         self.last_mod_time = None
+
+    def close(self):
+        """Explicit cleanup method for journal file handle"""
+        if self.log_file is not None:
+            try:
+                self.log_file.close()
+                self.log_file = None
+                logger.debug("EDJournal file handle closed")
+            except Exception as e:
+                logger.warning(f"Error closing journal file: {e}")
+
+    def __del__(self):
+        """Cleanup when object is destroyed"""
+        self.close()
 
     def parse_line(self, log):
         # parse data
