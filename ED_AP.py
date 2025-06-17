@@ -72,6 +72,8 @@ class EDAutopilot:
             "HotKey_StartSC": "ins",       # to determine other keynames, make sure these keys are not used in ED bindings
             "HotKey_StartRobigo": "pgup",  #
             "HotKey_StartWaypoint": "del",  # Hotkey to start waypoint assist
+            "HotKey_StartAFK": "f9",       # Hotkey to start AFK Combat assist
+            "HotKey_StartDSS": "f10",      # Hotkey to start DSS assist
             "HotKey_StopAllAssists": "end",
             "HotKey_PauseResume": "pause",  # Hotkey to pause/resume all running assists
             "Robigo_Single_Loop": False,   # True means only 1 loop will executed and then terminate the Robigo, will not perform mission processing
@@ -153,6 +155,10 @@ class EDAutopilot:
                     cnf['HotKey_PauseResume'] = "pause"
                 if 'HotKey_StartWaypoint' not in cnf:
                     cnf['HotKey_StartWaypoint'] = "del"
+                if 'HotKey_StartAFK' not in cnf:
+                    cnf['HotKey_StartAFK'] = "f9"
+                if 'HotKey_StartDSS' not in cnf:
+                    cnf['HotKey_StartDSS'] = "f10"
                 self.config = cnf
                 logger.debug("read AP json:"+str(cnf))
             else:
@@ -242,7 +248,7 @@ class EDAutopilot:
         # If you find that you are overshoot in pitch or roll, need to adjust these numbers.
         # Algorithm will roll the vehicle for the nav point to be north or south and then pitch to get the nave point
         # to center
-        self.compass_scale = 0.0
+        self.compass_scale = 1.0
         self.yawrate   = 8.0
         self.rollrate  = 80.0
         self.pitchrate = 33.0

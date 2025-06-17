@@ -67,7 +67,10 @@ class AssistPanel:
             r += 1
 
             self.checkboxvar[field] = IntVar()
-            lab = Checkbutton(row, text=field, anchor='w', width=27, justify=LEFT, 
+            
+            # Create dynamic label with current hotkey
+            dynamic_text = self._get_dynamic_label_text(field)
+            lab = Checkbutton(row, text=dynamic_text, anchor='w', width=27, justify=LEFT, 
                              variable=self.checkboxvar[field], 
                              command=lambda field=field: self.check_callback(field))
             self.lab_ck[field] = lab
@@ -295,3 +298,30 @@ class AssistPanel:
     def update_waypoint_file_label(self, label_text):
         """Update waypoint file label"""
         self.wp_filelabel.set(label_text)
+    
+    def _get_dynamic_label_text(self, field):
+        """Get dynamic label text with current hotkey for assist mode"""
+        # Map assist fields to config keys
+        hotkey_map = {
+            'FSD Route Assist': 'HotKey_StartFSD',
+            'Supercruise Assist': 'HotKey_StartSC', 
+            'Waypoint Assist': 'HotKey_StartWaypoint',
+            'Robigo Assist': 'HotKey_StartRobigo',
+            'AFK Combat Assist': 'HotKey_StartAFK',
+            'DSS Assist': 'HotKey_StartDSS'
+        }
+        
+        config_key = hotkey_map.get(field)
+        if config_key and hasattr(self.ed_ap, 'config') and config_key in self.ed_ap.config:
+            hotkey = self.ed_ap.config[config_key]
+            if hotkey and hotkey != 'None':
+                return f"{field} ({hotkey})"
+        
+        return field
+    
+    def refresh_dynamic_labels(self):
+        """Refresh all dynamic labels with current hotkeys"""
+        for field in self.lab_ck:
+            if field in self.lab_ck:
+                dynamic_text = self._get_dynamic_label_text(field)
+                self.lab_ck[field].config(text=dynamic_text)

@@ -98,32 +98,69 @@ def read_json_file(file_path):
         json.JSONDecodeError: If file contains invalid JSON
         UnicodeDecodeError: If file can't be decoded with detected encoding
     """
+    import time
+    
     encoding = get_encoding()
     
-    try:
-        with open(file_path, 'r', encoding=encoding) as file:
-            return json.load(file)
-    except (UnicodeDecodeError, UnicodeError) as e:
-        logger.warning(f"Failed to read JSON file {file_path} with detected encoding {encoding}: {e}")
-        # Try UTF-8 as fallback
-        if encoding != ENCODING_UTF8:
-            logger.info(f"Retrying {file_path} with UTF-8 fallback")
-            try:
-                with open(file_path, 'r', encoding=ENCODING_UTF8) as file:
-                    return json.load(file)
-            except (UnicodeDecodeError, UnicodeError) as e2:
-                raise UnicodeDecodeError(
-                    f"Could not read {file_path} with {encoding} or UTF-8 fallback. "
-                    f"File may contain unsupported characters or be corrupted."
-                ) from e
-        else:
+    # Retry logic for empty files (Elite Dangerous often writes empty files temporarily)
+    max_retries = 3
+    retry_delay = 0.1  # 100ms
+    
+    for attempt in range(max_retries):
+        try:
+            with open(file_path, 'r', encoding=encoding) as file:
+                # Check if file is empty and retry if so
+                content = file.read()
+                if not content.strip():
+                    if attempt < max_retries - 1:
+                        logger.debug(f"Empty JSON file {file_path}, retrying in {retry_delay}s...")
+                        time.sleep(retry_delay)
+                        file.seek(0)
+                        continue
+                    else:
+                        logger.warning(f"JSON file {file_path} is empty after {max_retries} attempts")
+                        return {}
+                
+                # Reset file pointer and parse JSON
+                file.seek(0)
+                return json.load(file)
+                
+        except (UnicodeDecodeError, UnicodeError) as e:
+            logger.warning(f"Failed to read JSON file {file_path} with detected encoding {encoding}: {e}")
+            # Try UTF-8 as fallback
+            if encoding != ENCODING_UTF8:
+                logger.info(f"Retrying {file_path} with UTF-8 fallback")
+                try:
+                    with open(file_path, 'r', encoding=ENCODING_UTF8) as file:
+                        content = file.read()
+                        if not content.strip():
+                            if attempt < max_retries - 1:
+                                logger.debug(f"Empty JSON file {file_path} (UTF-8), retrying in {retry_delay}s...")
+                                time.sleep(retry_delay)
+                                continue
+                            else:
+                                return {}
+                        file.seek(0)
+                        return json.load(file)
+                except (UnicodeDecodeError, UnicodeError) as e2:
+                    raise UnicodeDecodeError(
+                        f"Could not read {file_path} with {encoding} or UTF-8 fallback. "
+                        f"File may contain unsupported characters or be corrupted."
+                    ) from e
+            else:
+                raise
+        except json.JSONDecodeError as e:
+            # For JSON decode errors, also check if it's due to empty/partial content
+            if attempt < max_retries - 1:
+                logger.debug(f"JSON decode error in {file_path}, retrying in {retry_delay}s... Error: {e}")
+                time.sleep(retry_delay)
+                continue
+            else:
+                logger.error(f"Invalid JSON in file {file_path} after {max_retries} attempts: {e}")
+                raise
+        except OSError as e:
+            logger.error(f"OS error reading file {file_path}: {e}")
             raise
-    except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON in file {file_path}: {e}")
-        raise
-    except OSError as e:
-        logger.error(f"OS error reading file {file_path}: {e}")
-        raise
 
 
 def read_text_file(file_path):

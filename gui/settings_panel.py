@@ -552,7 +552,7 @@ class SettingsPanel:
         
         # Hotkey capture buttons
         self.entries['buttons'] = {}
-        buttons_entry_fields = ('Start FSD', 'Start SC', 'Start Robigo', 'Start Waypoint', 'Stop All', 'Pause/Resume')
+        buttons_entry_fields = ('Start FSD', 'Start SC', 'Start Robigo', 'Start Waypoint', 'Start AFK', 'Start DSS', 'Stop All', 'Pause/Resume')
         for i, field in enumerate(buttons_entry_fields):
             row = tk.Frame(blk_buttons)
             row.grid(row=i+2, column=0, padx=2, pady=2, sticky="nsew")
@@ -566,8 +566,9 @@ class SettingsPanel:
             btn.grid(row=0, column=1)
             self.entries['buttons'][field] = btn
             
-            # Add tooltip
-            tip = Hovertip(row, self.tooltips[field], hover_delay=1000)
+            # Add tooltip with Alt key warning
+            tooltip_text = self.tooltips[field] + "\n\nNote: Alt key combinations are not supported due to system limitations."
+            tip = Hovertip(row, tooltip_text, hover_delay=1000)
     
     def _create_fuel_settings(self, parent):
         """Create fuel settings block"""
@@ -837,5 +838,7 @@ class SettingsPanel:
             self.entries['buttons']['Start SC'].config(text=str(self.ed_ap.config['HotKey_StartSC']))
             self.entries['buttons']['Start Robigo'].config(text=str(self.ed_ap.config['HotKey_StartRobigo']))
             self.entries['buttons']['Start Waypoint'].config(text=str(self.ed_ap.config['HotKey_StartWaypoint']))
+            self.entries['buttons']['Start AFK'].config(text=str(self.ed_ap.config['HotKey_StartAFK']))
+            self.entries['buttons']['Start DSS'].config(text=str(self.ed_ap.config['HotKey_StartDSS']))
             self.entries['buttons']['Stop All'].config(text=str(self.ed_ap.config['HotKey_StopAllAssists']))
             self.entries['buttons']['Pause/Resume'].config(text=str(self.ed_ap.config['HotKey_PauseResume']))

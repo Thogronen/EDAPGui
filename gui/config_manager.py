@@ -237,6 +237,8 @@ class ConfigManager:
                     self.ed_ap.config['HotKey_StartSC'] = str(settings_panel.entries['buttons']['Start SC'].cget('text'))
                     self.ed_ap.config['HotKey_StartRobigo'] = str(settings_panel.entries['buttons']['Start Robigo'].cget('text'))
                     self.ed_ap.config['HotKey_StartWaypoint'] = str(settings_panel.entries['buttons']['Start Waypoint'].cget('text'))
+                    self.ed_ap.config['HotKey_StartAFK'] = str(settings_panel.entries['buttons']['Start AFK'].cget('text'))
+                    self.ed_ap.config['HotKey_StartDSS'] = str(settings_panel.entries['buttons']['Start DSS'].cget('text'))
                     self.ed_ap.config['HotKey_StopAllAssists'] = str(settings_panel.entries['buttons']['Stop All'].cget('text'))
                     self.ed_ap.config['HotKey_PauseResume'] = str(settings_panel.entries['buttons']['Pause/Resume'].cget('text'))
                 

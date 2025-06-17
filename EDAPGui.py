@@ -104,6 +104,8 @@ class APGui():
             'Start SC': "Hotkey to start Supercruise assist. \nClick button to capture new hotkey. Supports combinations like Ctrl+F2.",
             'Start Robigo': "Hotkey to start Robigo assist. \nClick button to capture new hotkey. Supports combinations like Ctrl+F3.",
             'Start Waypoint': "Hotkey to start waypoint assist (requires waypoint file loaded). \nClick button to capture new hotkey. Supports combinations like Ctrl+F4.",
+            'Start AFK': "Hotkey to start AFK combat assist. \nClick button to capture new hotkey. Supports combinations like Ctrl+F5.",
+            'Start DSS': "Hotkey to start DSS assist. \nClick button to capture new hotkey. Supports combinations like Ctrl+F6.",
             'Stop All': "Hotkey to stop all assists. \nClick button to capture new hotkey. Supports combinations like Ctrl+End.",
             'Pause/Resume': "Hotkey to pause/resume all running assists. \nClick button to capture new hotkey. Supports combinations like Ctrl+P. Right-click to cancel.",
             'Refuel Threshold': "If fuel level get below this level, \nit will attempt refuel.",
@@ -464,6 +466,8 @@ class APGui():
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartSC'], self.callback, args=('sc_start', None))
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartRobigo'], self.callback, args=('robigo_start', None))
         keyboard.add_hotkey(self.ed_ap.config['HotKey_StartWaypoint'], self.callback, args=('waypoint_start', None))
+        keyboard.add_hotkey(self.ed_ap.config['HotKey_StartAFK'], self.callback, args=('afk_start', None))
+        keyboard.add_hotkey(self.ed_ap.config['HotKey_StartDSS'], self.callback, args=('dss_start', None))
         
         # Only register pause hotkey if it's not empty
         pause_hotkey = self.ed_ap.config.get('HotKey_PauseResume', '').strip()
@@ -631,8 +635,9 @@ class APGui():
             # Check for modifier keys
             if event.state & 0x4:  # Control key
                 modifiers.append('ctrl')
-            if event.state & 0x8:  # Alt key  
-                modifiers.append('alt')
+            # Skip Alt key detection - it's often falsely detected on Windows
+            # if event.state & 0x8:  # Alt key  
+            #     modifiers.append('alt')
             if event.state & 0x1:  # Shift key
                 modifiers.append('shift')
             if event.state & 0x40:  # Windows/Super key
@@ -1189,14 +1194,14 @@ class APGui():
                 
                 # Create new panel
                 self.settings_panel = gui.settings_panel.SettingsPanel(
-                    parent, self.ed_ap, self._entry_update, self._check_cb
+                    parent, self.ed_ap, self.tooltips, self._entry_update, self._check_cb
                 )
                 
                 # Re-inject dependencies
                 self.settings_panel.set_config_manager(self.config_manager)
                 self.settings_panel.set_hotkey_capture_callback(self._capture_hotkey)
                 self.settings_panel.set_button_commands(
-                    self.config_manager.save_all_settings,
+                    self.config_manager.save_settings,
                     self.config_manager.revert_all_changes
                 )
                 
@@ -1239,8 +1244,11 @@ class APGui():
                 
                 # Create new panel
                 self.assist_panel = gui.assist_panel.AssistPanel(
-                    parent, self.ed_ap, self._check_cb
+                    parent, self.ed_ap, self.tooltips, self._check_cb
                 )
+                
+                # Connect assist panel callbacks
+                self.assist_panel.set_stop_all_callback(self.stop_all_assists)
                 
                 # Restore state
                 self._restore_assist_panel_state(state)
@@ -1456,7 +1464,7 @@ class APGui():
         """Force save all panels and configurations"""
         try:
             if self.config_manager:
-                self.config_manager.save_all_settings()
+                self.config_manager.save_settings()
             
             if self.waypoint_panel and hasattr(self.waypoint_panel, '_wp_editor_save'):
                 self.waypoint_panel._wp_editor_save()
