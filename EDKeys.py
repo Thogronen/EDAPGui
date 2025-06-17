@@ -30,6 +30,26 @@ def set_focus_elite_window():
         win32gui.SetForegroundWindow(handle)  # give focus to ED
 
 
+def is_elite_or_edapgui_focused():
+    """ Check if Elite Dangerous or EDAPGui window has focus """
+    foreground_handle = win32gui.GetForegroundWindow()
+    
+    # Check Elite Dangerous window
+    elite_handle = win32gui.FindWindow(0, "Elite - Dangerous (CLIENT)")
+    if elite_handle != 0 and elite_handle == foreground_handle:
+        return True
+    
+    # Check EDAPGui window (get window title)
+    try:
+        window_title = win32gui.GetWindowText(foreground_handle)
+        if "EDAutopilot" in window_title:
+            return True
+    except:
+        pass
+    
+    return False
+
+
 @final
 class EDKeys:
 

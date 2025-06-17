@@ -222,7 +222,7 @@ class EDAutopilot:
         # If you find that you are overshoot in pitch or roll, need to adjust these numbers.
         # Algorithm will roll the vehicle for the nav point to be north or south and then pitch to get the nave point
         # to center
-        self.compass_scale = 0.0
+        self.compass_scale = 1.0
         self.yawrate   = 8.0
         self.rollrate  = 80.0
         self.pitchrate = 33.0
@@ -2168,37 +2168,65 @@ class EDAutopilot:
     #
     def set_fsd_assist(self, enable=True):
         if enable == False and self.fsd_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread and self.ap_thread.is_alive():
+                try:
+                    self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+                except ValueError as e:
+                    logger.warning(f"Could not interrupt FSD assist thread: {e}")
         self.fsd_assist_enabled = enable
 
     def set_sc_assist(self, enable=True):
         if enable == False and self.sc_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread and self.ap_thread.is_alive():
+                try:
+                    self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+                except ValueError as e:
+                    logger.warning(f"Could not interrupt SC assist thread: {e}")
         self.sc_assist_enabled = enable
 
     def set_waypoint_assist(self, enable=True):
         if enable == False and self.waypoint_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread and self.ap_thread.is_alive():
+                try:
+                    self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+                except ValueError as e:
+                    logger.warning(f"Could not interrupt waypoint assist thread: {e}")
         self.waypoint_assist_enabled = enable
 
     def set_robigo_assist(self, enable=True):
         if enable == False and self.robigo_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread and self.ap_thread.is_alive():
+                try:
+                    self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+                except ValueError as e:
+                    logger.warning(f"Could not interrupt Robigo assist thread: {e}")
         self.robigo_assist_enabled = enable
 
     def set_afk_combat_assist(self, enable=True):
         if enable == False and self.afk_combat_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread and self.ap_thread.is_alive():
+                try:
+                    self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+                except ValueError as e:
+                    logger.warning(f"Could not interrupt AFK combat assist thread: {e}")
         self.afk_combat_assist_enabled = enable
 
     def set_dss_assist(self, enable=True):
         if enable == False and self.dss_assist_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread and self.ap_thread.is_alive():
+                try:
+                    self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+                except ValueError as e:
+                    logger.warning(f"Could not interrupt DSS assist thread: {e}")
         self.dss_assist_enabled = enable
 
     def set_single_waypoint_assist(self, system: str, station: str, enable=True):
         if enable == False and self.single_waypoint_enabled == True:
-            self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+            if self.ap_thread and self.ap_thread.is_alive():
+                try:
+                    self.ctype_async_raise(self.ap_thread, EDAP_Interrupt)
+                except ValueError as e:
+                    logger.warning(f"Could not interrupt single waypoint assist thread: {e}")
         self._single_waypoint_system = system
         self._single_waypoint_station = station
         self.single_waypoint_enabled = enable

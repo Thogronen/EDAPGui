@@ -36,6 +36,10 @@ class Image_Templates:
         """ Load the template image in color. If we need grey scale for matching, we can apply that later as needed.
         Resize the image, as the templates are based on 3440x1440 resolution, so scale to current screen resolution
          return image and size info. """
+        # Validate scale values to prevent OpenCV resize error
+        if scaleX <= 0 or scaleY <= 0:
+            raise ValueError(f"Invalid scale values: scaleX={scaleX}, scaleY={scaleY}. Scale values must be positive.")
+        
         template = cv2.imread(self.resource_path(file_name), cv2.IMREAD_GRAYSCALE)
         #logger.debug("File:"+self.resource_path(file_name)+" template:"+str(template))
         template = cv2.resize(template, (0, 0), fx=scaleX, fy=scaleY)
